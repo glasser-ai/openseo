@@ -1,0 +1,56 @@
+{
+  "name": "openseo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenSEO \u2014 an open-source domain inspector powered by glasser.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "generate:types": "openapi-typescript vendor/openapi.json -o src/glasser/schema.gen.ts",
+    "check:contract": "node scripts/check-contract.mjs",
+    "update:contract": "node scripts/update-contract.mjs"
+  },
+  "dependencies": {
+    "effect": "4.0.0-rc.112",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tldts": "7.4.13"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.13",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/chrome": "0.2.9",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^26.5.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@wxt-dev/module-react": "1.2.2",
+    "jsdom": "30.0.1",
+    "openapi-typescript": "7.13.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0",
+    "wxt": "0.21.4"
+  },
+  "pnpm": {
+    "//": "effect must stay on the version the glasser API contract targets; never auto-bump it.",
+    "updateConfig": {
+      "ignoreDependencies": [
+        "effect"
+      ]
+    }
+  },
+  "packageManager": "pnpm@10.12.4"
+}

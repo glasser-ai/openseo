@@ -1,0 +1,407 @@
+@import "tailwindcss";
+
+/*
+ * Fonts are self-hosted, **never fonts.googleapis.com**.
+ *
+ * Two reasons, and the second is the binding one:
+ *  1. a stylesheet request to a font CDN is render-blocking and third-party;
+ *  2. more importantly, requesting a Google domain from the extension would
+ *     make PRIVACY.md's "nothing but api.glasser.ai and the site you are
+ *     looking at" false on the spot.
+ * The files live in `fonts`, not `_fonts`: Chrome reserves **every name
+ * beginning with `_`** at an extension's root for itself (`_locales`,
+ * `_metadata`), so the leading underscore common in web-app asset directories
+ * fails the whole manifest here.
+ */
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/poppins-400-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/poppins-500-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/poppins-600-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Kode Mono";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/kode-mono-latin.woff2") format("woff2");
+}
+
+/*
+ * Design tokens — the tweakcn "Glasser" theme. Upstream stores bare oklch
+ * triples and lets a Tailwind preset inject the alpha; here they are written
+ * out as whole colours.
+ *
+ * Three rules travel with the tokens, and this extension follows them:
+ *  1. Semantic colours only. Colour says two things: **state** (good / warn /
+ *     bad), and **identity within one chart** (chart-1..6, for a fixed closed
+ *     set like the channels). Never emphasis, and never decoration. It is also
+ *     always a redundant second channel — strip every colour and the panel must
+ *     still read.
+ *  2. muted-foreground is the only secondary text colour. Go further down the
+ *     hierarchy with size, weight and the mono face, not by fading further.
+ *  3. Text on primary is always primary-foreground, never a hardcoded white —
+ *     in dark mode primary is near-white and white text would disappear.
+ *
+ * Light is the baseline and lives in the top-level @theme: Tailwind v4 only
+ * allows @theme at the top level, and nesting it inside @media does not override
+ * the baseline but replaces it, so light mode would get the dark values.
+ */
+@theme {
+  /*
+   * The card is white and the background sits one step darker.
+   *
+   * 0.985 was too close: a white card at 255 on a 250 background is 5/255 apart
+   * and barely visible, so where a section ended rested entirely on that 229
+   * hairline border, and the sectioning could not be read. Dark mode puts card
+   * 23 on background 10, which is 13/255, and light is aligned to match.
+   */
+  --color-background: oklch(0.96 0 0);
+  --color-foreground: oklch(0.145 0 0);
+  --color-card: oklch(1 0 0);
+  --color-primary: oklch(0.1684 0 0);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-muted: oklch(0.97 0 0);
+  --color-muted-foreground: oklch(0.53 0 0);
+  --color-border: oklch(0.922 0 0);
+  /* 0.6 on white is only 2.9:1, under the 3:1 floor for non-text indicators —
+     which would leave every focus ring in the panel non-compliant. */
+  --color-ring: oklch(0.45 0 0);
+
+  /*
+   * The fills (the meter's three bands) are set against **the border**, not the
+   * card.
+   *
+   * A meter's track is --color-border (0.922), lighter than the background, so
+   * it is the tightest of the three surfaces: clear it and card and background
+   * follow. These three used to share one value across both schemes — a value
+   * tuned for the dark card, which on a white card left good at 2.63:1 and warn
+   * at 1.58:1, and against the border 2.09 and 1.25. That is to say the warn
+   * band was **not visible at all** in light mode.
+   */
+  --color-good: oklch(0.56 0.13 150); /* #2d8949  card 4.39 / bg 3.91 / track 3.48 */
+  --color-warn: oklch(0.61 0.12 70); /* #b07521  card 3.89 / bg 3.46 / track 3.09 */
+  --color-bad: oklch(0.55 0.19 25); /* #c92f33  card 5.35 / bg 4.76 / track 4.25 */
+  /* The three -text tokens are untouched: 5.41 / 5.54 / 5.21 on white, well past
+     the 4.5 floor for body text. */
+  --color-good-text: hsl(146 58% 30%);
+  --color-warn-text: hsl(35 100% 30%);
+  --color-bad-text: hsl(358 64.8% 49%);
+
+  /*
+   * The categorical palette — six slots, for **channels**, not for countries.
+   *
+   * Not Okabe-Ito verbatim: four of those eight sit under 3:1 on white (#E69F00
+   * is 2.25, #56B4E9 is 2.31) and would be invisible as an 18px arc or an 8px
+   * legend dot. What is taken from it is the **hue order** and its structural
+   * trick — separate a crowded pair by lightness rather than by hue — with the
+   * lightness retuned per scheme in OKLCH, so "tells apart" and "is visible"
+   * hold at the same time.
+   *
+   * Measured: 3.81:1 minimum on the card in light, 3.39:1 on the background and
+   * 3.02:1 against the border ring behind the donut; deltaE76 16.7 between the
+   * closest pair under red-green dichromat simulation (Vienot 1999) — where
+   * Okabe-Ito itself scores 17.1, but only 1.32:1 on white.
+   *
+   * **Do not adjust a subset.** The separation lives in the relationships
+   * **between** the six lightnesses: raising 3, 5 and 6 a step for contrast
+   * drops the whole set from deltaE 16.7 to 5.2. Change all six together, then
+   * run palette.test.ts.
+   */
+  --color-chart-1: oklch(0.5 0.15 254); /* #1163b6 blue       */
+  --color-chart-2: oklch(0.5 0.16 32); /* #ab331f vermillion */
+  --color-chart-3: oklch(0.59 0.12 158); /* #2c9261 green      */
+  --color-chart-4: oklch(0.45 0.17 338); /* #8c1f75 magenta    */
+  --color-chart-5: oklch(0.6 0.12 85); /* #9f7818 amber      */
+  --color-chart-6: oklch(0.6 0.09 210); /* #2d8f9e sky        */
+  /*
+   * The "not attributed to any channel" segment.
+   *
+   * It is **a real category**, not a background: the Provider does not guarantee
+   * all six channels, and measured on openai.com it returned three totalling
+   * 55.6%. This share used to be the track colour showing through, with no name
+   * and no percentage, so the gap read as a broken chart.
+   *
+   * A neutral grey, and separable from the six hues: 5.51:1 on white, and
+   * deltaE76 17.7 from its nearest neighbour under dichromat simulation.
+   */
+  --color-chart-rest: oklch(0.52 0 0); /* #6b6b6b */
+
+  /* The accent for the trend line. It is chart-1 — the same colour, rather than
+     a second blue invented for the purpose. */
+  --color-accent: oklch(0.5 0.15 254);
+  /* The area fill uses a tuned light token rather than accent plus opacity:
+     what translucency produces depends on what is behind it, and in dark mode it
+     muddies into a dirty blue. */
+  --color-accent-soft: oklch(0.95 0.02 254); /* #e6f0fc */
+
+  --radius-token: 0.625rem;
+  /* Controls and small blocks take the smaller step. The product has these two
+     radii and nothing else, apart from the few things that are actual circles. */
+  --radius-sm: 0.375rem;
+
+  /*
+   * The type scale — four steps, not sixteen.
+   *
+   * 12 / 12.5 / 13 were once used as three levels. A 0.5px difference is not
+   * visible to a reader, so that was not three levels but one level written
+   * three times — and it only ever looked like a misalignment. Each step here is
+   * about 1.4x the last, which is visible.
+   */
+  --text-hero: 28px;
+  --text-figure: 20px;
+  --text-body: 14px;
+  --text-small: 12px;
+  --text-section: 16px;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Kode Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: oklch(0.145 0 0);
+    --color-foreground: oklch(0.985 0 0);
+    --color-card: oklch(0.205 0 0);
+    --color-primary: oklch(0.922 0 0);
+    --color-primary-foreground: oklch(0.205 0 0);
+    --color-muted: oklch(0.269 0 0);
+    --color-muted-foreground: oklch(0.708 0 0);
+    --color-border: oklch(0.275 0 0);
+    --color-ring: oklch(0.556 0 0);
+
+    /* These three already clear their floors in dark: 4.00 / 7.25 / 4.00 against
+       the meter track. Left alone. */
+    --color-good: hsl(144 47% 48%);
+    --color-good-text: hsl(144 60% 62%);
+    --color-warn: hsl(42 100% 62%);
+    --color-warn-text: hsl(46 100% 54.3%);
+    --color-bad: hsl(358 75.1% 59%);
+    --color-bad-text: hsl(2 100% 78.6%);
+
+    /* The same hues with lightness retuned for the dark card: 5.31:1 minimum,
+       and deltaE76 21.4 under dichromat simulation. */
+    --color-chart-1: oklch(0.7 0.15 254); /* #56a1f9 */
+    --color-chart-2: oklch(0.66 0.14 32); /* #da6e5a */
+    --color-chart-3: oklch(0.82 0.15 158); /* #5fe19e */
+    --color-chart-4: oklch(0.66 0.16 338); /* #cf67b4 */
+    --color-chart-5: oklch(0.86 0.14 90); /* #f5cc58 */
+    --color-chart-6: oklch(0.85 0.09 210); /* #83deee */
+    --color-chart-rest: oklch(0.6 0 0); /* #808080  card 4.54 / ΔE 20.6 */
+    --color-accent: oklch(0.7 0.15 254);
+    --color-accent-soft: oklch(0.28 0.045 254); /* #192a3f */
+  }
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * These two classes **must live in @layer base**. Unlayered rules come after
+ * utilities, and both have the same specificity (one class each), so source
+ * order decides: any utility trying to change the size on the same element is
+ * silently ignored. In the base layer they are **defaults**, which a utility can
+ * override.
+ *
+ * (.mono now carries no font-size at all, so this only still bites for .lbl —
+ * but the layering is correct, so it stays.)
+ */
+@layer base {
+  /*
+   * All-caps has **exactly one job**: the three section headings.
+   *
+   * .lbl used to be the section heading, the caption under a figure, the
+   * right-aligned disclaimer, the data age, the live status and the status badge
+   * — six jobs wearing one face. When the most structural element looks
+   * identical to the least important one, it marks nothing at all and leaves
+   * only a texture resembling legal footnotes. Seven of them were once countable
+   * on a single screen.
+   *
+   * Also: it is now sans, not mono.
+   */
+  .lbl {
+    font-size: var(--text-section);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  /*
+   * Kode Mono has exactly one job too: **money and machine identifiers** —
+   * prices, Charges, Run links, the gl_ input. It carries no font-size: it takes
+   * whichever step it lands on, which makes it an axis rather than a level.
+   */
+  .mono {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+}
+
+.scroll-area {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* The panel is a full-height iframe injected into the page. The shell measures
+   h-dvh (the iframe's viewport), but all three levels still need their height:
+   without the #root level, any h-full descendant falls back to auto and the
+   whole block is only as tall as its content — leaving the sidebar's grey
+   background stopping where the copy ends. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+@layer components {
+  .button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 12px; padding: 8px 16px; border-radius: var(--radius-sm); font-weight: 500; text-align: center; cursor: pointer; }
+  .button-primary { background: var(--color-primary); color: var(--color-primary-foreground); }
+  .button-secondary { border: 1px solid var(--color-border); background: var(--color-card); }
+  .button:hover:not(:disabled) { filter: brightness(.94); }
+  .button:disabled { background: var(--color-muted); color: var(--color-muted-foreground); cursor: default; }
+  .text-button { min-height: 36px; padding: 6px 0; color: var(--color-foreground); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .report-card { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-token); background: var(--color-card); padding: 20px; }
+  .result-source { margin-top: 16px; border-top: 1px solid var(--color-border); padding-top: 12px; font-size: var(--text-small); color: var(--color-muted-foreground); }
+  .result-source a { text-decoration: underline; text-underline-offset: 3px; }
+  .field { display: block; width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--color-card); color: var(--color-foreground); }
+  .report-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--color-border); background: var(--color-card); padding: 0 12px; }
+  .report-tabs button { flex: 1; min-width: 0; min-height: 48px; border-bottom: 2px solid transparent; color: var(--color-muted-foreground); cursor: pointer; }
+  .report-tabs button[aria-selected=true] { color: var(--color-foreground); border-color: var(--color-primary); font-weight: 600; }
+  .keyword-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+  .keyword-table caption { padding-bottom: 12px; text-align: left; color: var(--color-muted-foreground); font-size: var(--text-small); }
+  .keyword-table th { font-size: var(--text-small); font-weight: 500; color: var(--color-muted-foreground); }
+  .keyword-table th, .keyword-table td { padding: 12px 4px; text-align: right; vertical-align: top; border-bottom: 1px solid var(--color-border); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  /* Five columns inside a 356px content width: at half the width the keyword
+     squeezes the four numbers out, so it gives way to 34% and the four numeric
+     columns take about 16% each. */
+  .keyword-table th:first-child, .keyword-table td:first-child { width: 34%; padding-left: 0; padding-right: 8px; text-align: left; }
+  .keyword-table th:not(:first-child), .keyword-table td:not(:first-child) { width: 16.5%; padding-left: 4px; }
+  .keyword-table tr:last-child td { border-bottom: 0; }
+  .options-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 32px; max-width: 960px; margin: auto; padding: 32px 24px; }
+  .options-nav { display: flex; flex-direction: column; gap: 4px; }
+  .options-nav a { display: block; padding: 10px 12px; border-radius: var(--radius-sm); color: var(--color-muted-foreground); }
+  .options-nav a[aria-current=page] { color: var(--color-foreground); background: var(--color-muted); font-weight: 600; }
+}
+@layer base {
+  button, input, summary, a { -webkit-tap-highlight-color: transparent; }
+  :where(button, input, summary, a, [tabindex]):focus-visible { outline: 2px solid var(--color-ring); outline-offset: 3px; }
+  button, a, summary { touch-action: manipulation; }
+  summary { cursor: pointer; }
+
+  /*
+   * A browser's default cursor over a <button> is default, not pointer — only
+   * the .button class set cursor: pointer itself, which left every hand-styled
+   * control (refresh, the sidebar, the overview rows, the header icons) with no
+   * hint that it could be clicked. The rule belongs here rather than being
+   * repeated on each button.
+   */
+  button:not(:disabled),
+  [role="tab"]:not([aria-disabled="true"]),
+  a[href] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+@media (max-width: 600px) {
+  .options-layout { display: block; padding: 20px 16px; }
+  .options-nav { flex-direction: row; flex-wrap: wrap; gap: 4px; margin: 20px 0; }
+}
+@media (max-width: 380px) {
+  .report-card { padding: 16px; }
+  .report-tabs { padding: 0 4px; }
+  .report-tabs button { font-size: var(--text-small); }
+  .button { flex-wrap: wrap; gap: 4px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* Below the normal panel width, give reports the full content width. */
+@media (max-width: 480px) {
+  .report-workspace { flex-direction: column; }
+  .report-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .report-nav > div { grid-column: 1 / -1; margin-top: 4px; }
+  .report-nav > div > button { min-height: 32px; }
+  .report-card { padding: 16px; }
+}
+
+/*
+ * Windows High Contrast / forced colours.
+ *
+ * In this mode the system replaces fill, stroke and background-color with its
+ * own palette, so six arcs become one CanvasText, and so do six legend dots.
+ *
+ * **Do not take the author colours back with forced-color-adjust: none** — the
+ * user chose that theme for a reason. Go with it instead: identity already lives
+ * entirely in the labels, so the legend dots, which now carry nothing, are
+ * hidden; bars and meters recover "how far along" from Highlight plus a border.
+ *
+ * The donut arcs are left alone. Measured, Chrome still keeps SVG stroke colours
+ * in this mode, so the segments stay separable; should a browser replace those
+ * too, it degrades to "one ring, read the list" — the legend beside it names
+ * every segment with its share, and still reads.
+ */
+@media (forced-colors: active) {
+  .chart-swatch {
+    display: none;
+  }
+  .meter-fill,
+  .bar-fill {
+    background: Highlight;
+  }
+  .meter-track,
+  .bar-track {
+    border: 1px solid CanvasText;
+  }
+}
+
+/*
+ * The high-contrast preference.
+ *
+ * **It must be scoped to light as well.** @theme emits into @layer theme, while
+ * the dark block above is an unlayered :root — so an unscoped :root placed after
+ * it overrides dark too, and every value here is darker than the original:
+ * muted-foreground against the dark card drops from 6.91:1 to 2.12:1, leaving
+ * the high-contrast mode with less contrast than before.
+ *
+ * The six chart colours are **deliberately absent**. They already clear 3:1
+ * (3.27 at the lowest), and adjusting only some of them compresses the minimum
+ * colourblind separation from deltaE 16.7 to 5.2 — more contrast, but six
+ * channels that can no longer be told apart, which fails exactly the people this
+ * mode exists for.
+ */
+@media (prefers-color-scheme: light) and (prefers-contrast: more) {
+  :root {
+    --color-warn: oklch(0.54 0.116 70); /* #996103  card 5.19 / track 4.12 */
+    --color-muted-foreground: oklch(0.42 0 0); /* 8.46:1 on white */
+  }
+}

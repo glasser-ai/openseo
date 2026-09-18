@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Kode+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: oklch(0.145 0 0); } a:hover { color: oklch(0.32 0 0); }
+    .lbl { font-family: "Kode Mono", ui-monospace, Menlo, monospace; font-size: 9px;
+           letter-spacing: 0.12em; text-transform: uppercase; }
+    .mono { font-family: "Kode Mono", ui-monospace, Menlo, monospace; }
+  </style>
+</helmet>
+<div style="width: 420px; height: 600px; display: flex; flex-direction: column; overflow: hidden;
+            background: oklch(1 0 0); color: oklch(0.145 0 0);
+            font-family: Poppins, ui-sans-serif, system-ui, sans-serif;
+            font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;">
+
+  <div style="display: flex; align-items: center; gap: 9px; padding: 14px 22px; flex: none;">
+    <div style="width: 6px; height: 6px; border-radius: 999px; background: hsl(144 47% 48%); flex: none;"></div>
+    <div class="mono" style="font-size: 11px; color: oklch(0.53 0 0); flex: 1;">stripe.com/pricing</div>
+    <div class="lbl" style="color: oklch(0.53 0 0);">indexable</div>
+  </div>
+
+  <div style="padding: 26px 22px 30px; flex: none;">
+    <div style="font-size: 76px; font-weight: 600; line-height: 0.82; letter-spacing: -0.06em;">83</div>
+    <div style="font-size: 13px; color: oklch(0.53 0 0); margin-top: 14px; max-width: 30ch; line-height: 1.5;">
+      Nothing broken. Three things worth fixing, all of them about images and one long description.
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 18px; padding: 0 22px 22px; flex: none;">
+    <div><div style="font-size: 15px; font-weight: 600; letter-spacing: -0.03em;">3.2M</div><div class="lbl" style="color: oklch(0.53 0 0); margin-top: 5px;">visits</div></div>
+    <div><div style="font-size: 15px; font-weight: 600; letter-spacing: -0.03em;">95</div><div class="lbl" style="color: oklch(0.53 0 0); margin-top: 5px;">rating</div></div>
+    <div><div style="font-size: 15px; font-weight: 600; letter-spacing: -0.03em;">118K</div><div class="lbl" style="color: oklch(0.53 0 0); margin-top: 5px;">keywords</div></div>
+    <div><div style="font-size: 15px; font-weight: 600; letter-spacing: -0.03em;">1,240</div><div class="lbl" style="color: oklch(0.53 0 0); margin-top: 5px;">words</div></div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; border-top: 1px solid oklch(0.922 0 0); padding: 0 22px;">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid oklch(0.922 0 0);">
+      <div class="mono" style="font-size: 10px; color: hsl(35 100% 30%); flex: none; width: 34px;">1441</div>
+      <div style="font-size: 12.5px; line-height: 1.35; flex: 1;">Meta description will be cut off</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid oklch(0.922 0 0);">
+      <div class="mono" style="font-size: 10px; color: hsl(35 100% 30%); flex: none; width: 34px;">24</div>
+      <div style="font-size: 12.5px; line-height: 1.35; flex: 1;">images have no width or height</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid oklch(0.922 0 0);">
+      <div class="mono" style="font-size: 10px; color: hsl(35 100% 30%); flex: none; width: 34px;">31</div>
+      <div style="font-size: 12.5px; line-height: 1.35; flex: 1;">images served larger than shown</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 15px 0;">
+      <div class="mono" style="font-size: 10px; color: oklch(0.53 0 0); flex: none; width: 34px;">27</div>
+      <div style="font-size: 12.5px; line-height: 1.35; flex: 1; color: oklch(0.53 0 0);">headings, one level jump</div>
+    </div>
+  </div>
+
+  <div style="flex: none; display: flex; gap: 16px; padding: 12px 22px; border-top: 1px solid oklch(0.922 0 0);">
+    <div style="font-size: 11.5px; font-weight: 500;">Overview</div>
+    <div style="font-size: 11.5px; color: oklch(0.53 0 0);">Domain</div>
+    <div style="font-size: 11.5px; color: oklch(0.53 0 0);">Content</div>
+    <div style="font-size: 11.5px; color: oklch(0.53 0 0);">Links</div>
+    <div style="font-size: 11.5px; color: oklch(0.53 0 0);">More</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

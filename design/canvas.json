@@ -1,0 +1,47 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 420, "h": 600, "title": "Overview" },
+    { "file": "Domain.dc.html", "x": 520, "y": 0, "w": 420, "h": 600, "title": "Domain" },
+    { "file": "Dark.dc.html", "x": 1040, "y": 0, "w": 420, "h": 600, "title": "Overview, dark" },
+    {
+      "file": "DirectionB.dc.html",
+      "x": 0,
+      "y": 740,
+      "w": 420,
+      "h": 600,
+      "title": "Alt A — Editorial"
+    },
+    {
+      "file": "DirectionC.dc.html",
+      "x": 520,
+      "y": 740,
+      "w": 420,
+      "h": 600,
+      "title": "Alt B — Dense readout"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "n-main",
+      "x": 0,
+      "y": -150,
+      "w": 420,
+      "text": "THE DIRECTION\n\nAn inverted band carries the figures; the body below stays plain so the band keeps its force. Tokens are the repo's own — tweakcn \"Glasser\", monochrome, with amber/red/green reserved for state. Poppins + Kode Mono."
+    },
+    {
+      "id": "n-alts",
+      "x": 0,
+      "y": 620,
+      "w": 940,
+      "text": "TWO ALTERNATES — pick one, or tell me which parts to take from each.\n\nAlt A trades the band for air: one enormous figure, a plain-English summary, findings as a hairline list. Calmer, fewer numbers visible at once.\n\nAlt B is the opposite: a light grey canvas of white cards, everything on one screen with no scrolling, a sparkline on traffic. Denser, more dashboard than document."
+    },
+    {
+      "id": "n-data",
+      "x": 1040,
+      "y": 620,
+      "w": 420,
+      "text": "Every figure here is real, measured against the live API for stripe.com: DR 95, 3.2M estimated organic visits, 117.7K ranking keywords."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

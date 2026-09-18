@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm check-types
+      - run: pnpm test
+      - run: pnpm build
+      - name: Package production extension
+        env:
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+        run: node scripts/package-release.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openseo-chrome
+          path: |
+            .output/openseo-*-chrome.zip
+            .output/SHA256SUMS
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    needs: [check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: openseo-chrome
+          path: release-assets
+      - name: Verify archive checksum
+        working-directory: release-assets
+        run: sha256sum --check SHA256SUMS
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" release-assets/*.zip release-assets/SHA256SUMS \
+            --verify-tag --title "OpenSEO $RELEASE_TAG" \
+            --notes-file .github/RELEASE_NOTES.md

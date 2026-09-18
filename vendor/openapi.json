@@ -1,0 +1,3366 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Glasser",
+    "version": "0.0.1",
+    "description": "One key, no contract, pay per call, across paid APIs bought wholesale. Every response carries x-request-id; every error body carries the same envelope."
+  },
+  "paths": {
+    "/v1/endpoints/search": {
+      "post": {
+        "tags": [
+          "Endpoints"
+        ],
+        "operationId": "endpoints-search",
+        "parameters": [],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9][a-z0-9-]*$"
+                          },
+                          "provider_label": {
+                            "type": "string",
+                            "description": "The Provider's brand name, for display: \"People Data Labs\" for provider \"pdl\". Identity stays with `provider` — that is the value run and inspect take, and this one is never sent back."
+                          },
+                          "endpoint": {
+                            "type": "string",
+                            "pattern": "^\\/.+$"
+                          },
+                          "endpoint_version": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "price": {
+                            "type": "object",
+                            "properties": {
+                              "rule": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "flat"
+                                        ]
+                                      },
+                                      "amount_usd": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                        "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "amount_usd"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "per_result"
+                                        ]
+                                      },
+                                      "per_result_usd": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                        "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                      },
+                                      "cap_usd": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                        "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                      },
+                                      "partial_usd": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                        "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "per_result_usd",
+                                      "cap_usd"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "charges": {
+                                "type": "object",
+                                "properties": {
+                                  "NO_RESULT": {
+                                    "type": "string",
+                                    "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                    "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                  },
+                                  "PROVIDER_ERROR": {
+                                    "type": "string",
+                                    "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                    "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                  },
+                                  "TIMED_OUT": {
+                                    "type": "string",
+                                    "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                    "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                  },
+                                  "INTERNAL": {
+                                    "type": "string",
+                                    "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                    "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                  }
+                                },
+                                "required": [
+                                  "NO_RESULT",
+                                  "PROVIDER_ERROR",
+                                  "TIMED_OUT",
+                                  "INTERNAL"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "rule",
+                              "charges"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "run_mode": {
+                            "type": "string",
+                            "enum": [
+                              "sync",
+                              "async"
+                            ]
+                          },
+                          "timeout_ms": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "score": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN"
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Cosine similarity between the query and this endpoint's searchable text, in [-1, 1]; null when semantic scoring did not run. A similarity signal for comparing rows, not a verdict: ranking fuses two arms, and neither a low score nor the end of the results shows that a capability is absent."
+                          }
+                        },
+                        "required": [
+                          "provider",
+                          "provider_label",
+                          "endpoint",
+                          "endpoint_version",
+                          "name",
+                          "description",
+                          "tags",
+                          "price",
+                          "run_mode",
+                          "score"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Total number of ranked candidates across all pages."
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "next_cursor",
+                    "total"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RateLimited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Searches the data sources by keyword and returns ranked endpoint summaries, each identified by provider, endpoint, and endpoint_version, with its price and run mode. Several providers may sell the same capability; the ranking is relevance-only and the price is shown alongside so the caller chooses. Pages are short by default (5, up to 20): read `total` for how many candidates exist, then pass next_cursor back as cursor for the next page; the cursor is bound to the query. The list is already scoped to the calling key's effective policy: every endpoint in it is one this key can run. Each hit carries a `score`, the cosine similarity between the query and that endpoint's description: use it to compare rows, and inspect an endpoint before running it. The ranking returns its nearest candidates rather than withholding them, so neither a page of low scores nor reaching the last page shows that a capability is absent — try other words before concluding that.",
+        "summary": "Search runnable endpoints",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "limit": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 20
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "cursor": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/v1/endpoints/inspect": {
+      "post": {
+        "tags": [
+          "Endpoints"
+        ],
+        "operationId": "endpoints-inspect",
+        "parameters": [],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]*$"
+                    },
+                    "provider_label": {
+                      "type": "string",
+                      "description": "The Provider's brand name, for display: \"People Data Labs\" for provider \"pdl\". Identity stays with `provider` — that is the value run and inspect take, and this one is never sent back."
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "pattern": "^\\/.+$"
+                    },
+                    "endpoint_version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "price": {
+                      "type": "object",
+                      "properties": {
+                        "rule": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "flat"
+                                  ]
+                                },
+                                "amount_usd": {
+                                  "type": "string",
+                                  "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                  "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "amount_usd"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "per_result"
+                                  ]
+                                },
+                                "per_result_usd": {
+                                  "type": "string",
+                                  "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                  "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                },
+                                "cap_usd": {
+                                  "type": "string",
+                                  "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                  "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                },
+                                "partial_usd": {
+                                  "type": "string",
+                                  "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                  "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "per_result_usd",
+                                "cap_usd"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "charges": {
+                          "type": "object",
+                          "properties": {
+                            "NO_RESULT": {
+                              "type": "string",
+                              "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                              "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                            },
+                            "PROVIDER_ERROR": {
+                              "type": "string",
+                              "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                              "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                            },
+                            "TIMED_OUT": {
+                              "type": "string",
+                              "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                              "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                            },
+                            "INTERNAL": {
+                              "type": "string",
+                              "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                              "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                            }
+                          },
+                          "required": [
+                            "NO_RESULT",
+                            "PROVIDER_ERROR",
+                            "TIMED_OUT",
+                            "INTERNAL"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "rule",
+                        "charges"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "run_mode": {
+                      "type": "string",
+                      "enum": [
+                        "sync",
+                        "async"
+                      ]
+                    },
+                    "timeout_ms": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "HEAD"
+                      ]
+                    },
+                    "input_schema": {
+                      "type": "object"
+                    },
+                    "output_schema": {
+                      "anyOf": [
+                        {
+                          "type": "object"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "output_schema_source": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "provider",
+                            "glasser"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sample_input": {
+                      "type": "object"
+                    },
+                    "doc_url": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "provider_label",
+                    "endpoint",
+                    "endpoint_version",
+                    "name",
+                    "description",
+                    "tags",
+                    "price",
+                    "run_mode",
+                    "method",
+                    "input_schema",
+                    "output_schema",
+                    "output_schema_source",
+                    "sample_input",
+                    "doc_url"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "EndpointVersionMismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndpointVersionMismatchEncoded"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RateLimited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the full execution contract of one endpoint: the provider-native input JSON Schema, the output JSON Schema when a trustworthy one exists (null otherwise — samples never imply a contract), its source, the price with every charge clause, the current endpoint_version, the run mode, a sample input, and a link to the provider's own documentation. A sync endpoint also publishes timeout_ms, the maximum time from request to terminal response — set your HTTP client timeout above it. Passing endpoint_version selects a supported version, including an older one. Compatible updates keep that version. Unavailable or retired versions answer 409. Price can change without a version change; new Runs use the Price at admission, while accepted Runs keep their original Price.",
+        "summary": "Inspect one endpoint: schemas, price, version",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]*$"
+                  },
+                  "endpoint": {
+                    "type": "string",
+                    "pattern": "^\\/.+$"
+                  },
+                  "endpoint_version": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "description": "Select a supported Endpoint version, or omit for the default. Returns the current Price for that version; selecting a version does not lock its Price."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "provider",
+                  "endpoint"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/v1/runs": {
+      "post": {
+        "tags": [
+          "Runs"
+        ],
+        "operationId": "runs-create",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A caller-generated idempotency key (a UUID is recommended). One key binds to one run: a retry with the same key after a network timeout is a read, not a second execution."
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "a terminal run: COMPLETED, FAILED or STOPPED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "run_url": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]*$"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "pattern": "^\\/.+$"
+                    },
+                    "endpoint_version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "QUEUED",
+                        "RUNNING",
+                        "COMPLETED",
+                        "FAILED",
+                        "STOPPED"
+                      ]
+                    },
+                    "failure": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "TIMED_OUT",
+                                "INTERNAL"
+                              ]
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "message"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "input": {
+                      "type": "object"
+                    },
+                    "output": {},
+                    "provider_response": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "http_status": {
+                              "type": "integer",
+                              "minimum": 100,
+                              "maximum": 599
+                            },
+                            "error": {
+                              "anyOf": [
+                                {},
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "http_status"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "charge_usd": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                          "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "charge_basis": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "clause": {
+                              "type": "string",
+                              "enum": [
+                                "rule",
+                                "NO_RESULT",
+                                "PROVIDER_ERROR",
+                                "TIMED_OUT",
+                                "INTERNAL"
+                              ]
+                            },
+                            "quantity": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "clause",
+                            "quantity"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stoppable": {
+                      "type": "boolean"
+                    },
+                    "stop_requested_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp",
+                      "format": "date-time"
+                    },
+                    "started_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "completed_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "run_url",
+                    "provider",
+                    "endpoint",
+                    "endpoint_version",
+                    "status",
+                    "failure",
+                    "input",
+                    "output",
+                    "provider_response",
+                    "charge_usd",
+                    "charge_basis",
+                    "stoppable",
+                    "stop_requested_at",
+                    "created_at",
+                    "started_at",
+                    "completed_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "an in-flight run: QUEUED or RUNNING",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "run_url": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]*$"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "pattern": "^\\/.+$"
+                    },
+                    "endpoint_version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "QUEUED",
+                        "RUNNING",
+                        "COMPLETED",
+                        "FAILED",
+                        "STOPPED"
+                      ]
+                    },
+                    "failure": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "TIMED_OUT",
+                                "INTERNAL"
+                              ]
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "message"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "input": {
+                      "type": "object"
+                    },
+                    "output": {},
+                    "provider_response": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "http_status": {
+                              "type": "integer",
+                              "minimum": 100,
+                              "maximum": 599
+                            },
+                            "error": {
+                              "anyOf": [
+                                {},
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "http_status"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "charge_usd": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                          "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "charge_basis": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "clause": {
+                              "type": "string",
+                              "enum": [
+                                "rule",
+                                "NO_RESULT",
+                                "PROVIDER_ERROR",
+                                "TIMED_OUT",
+                                "INTERNAL"
+                              ]
+                            },
+                            "quantity": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "clause",
+                            "quantity"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stoppable": {
+                      "type": "boolean"
+                    },
+                    "stop_requested_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp",
+                      "format": "date-time"
+                    },
+                    "started_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "completed_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "run_url",
+                    "provider",
+                    "endpoint",
+                    "endpoint_version",
+                    "status",
+                    "failure",
+                    "input",
+                    "output",
+                    "provider_response",
+                    "charge_usd",
+                    "charge_basis",
+                    "stoppable",
+                    "stop_requested_at",
+                    "created_at",
+                    "started_at",
+                    "completed_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ValidationFailed | IdempotencyKeyRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyRequiredEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "InsufficientBalance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsufficientBalanceEncoded"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "EndpointNotPermitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndpointNotPermittedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IdempotencyConflict | EndpointVersionMismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/IdempotencyConflictEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EndpointVersionMismatchEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RateLimited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Admits one execution at the selected supported Endpoint version (the default if omitted). The version does not lock Price: new Runs use its current Price, and accepted Runs keep that exact Price through settlement. The policy is checked, a hold is reserved for the price's maximum charge, and a run is created. Input is provider-native — construct it against the inspected input_schema. A sync endpoint always answers 200 with the terminal run inside its published timeout_ms — it never returns 202, so no polling code is needed. An async endpoint answers 200 when the run is terminal within a short server budget, otherwise 202 with the in-flight run, which you can poll or stop. Status reports whether a usable provider response won settlement, never whether the provider accepted the request: a provider 404 or 500 is a COMPLETED run whose provider_response carries the received status, charged by the price's NO_RESULT or PROVIDER_ERROR clause. The Idempotency-Key header is required — a retry with the same key returns the same run and is never charged twice, while the same key with a different request body returns 409. Balance and policy refusals happen before admission and create no run.",
+        "summary": "Run an endpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]*$"
+                  },
+                  "endpoint": {
+                    "type": "string",
+                    "pattern": "^\\/.+$"
+                  },
+                  "input": {
+                    "type": "object"
+                  },
+                  "endpoint_version": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "description": "Select a supported Endpoint version. Compatible updates keep this version; it does not lock the Price. New Runs use the Price at admission. Omit to use the default version. Unavailable or retired versions return 409."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "provider",
+                  "endpoint"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "operationId": "runs-list",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[+-]?\\d*\\.?\\d+(?:[Ee][+-]?\\d+)?$"
+            },
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required": false
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "QUEUED",
+                    "RUNNING",
+                    "COMPLETED",
+                    "FAILED",
+                    "STOPPED"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required": false
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required": false
+          },
+          {
+            "name": "endpoint",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "run_url": {
+                            "type": "string"
+                          },
+                          "provider": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9][a-z0-9-]*$"
+                          },
+                          "endpoint": {
+                            "type": "string",
+                            "pattern": "^\\/.+$"
+                          },
+                          "endpoint_version": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "QUEUED",
+                              "RUNNING",
+                              "COMPLETED",
+                              "FAILED",
+                              "STOPPED"
+                            ]
+                          },
+                          "failure": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "TIMED_OUT",
+                                      "INTERNAL"
+                                    ]
+                                  },
+                                  "message": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "message"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "input": {
+                            "type": "object"
+                          },
+                          "output": {},
+                          "provider_response": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "http_status": {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 599
+                                  },
+                                  "error": {
+                                    "anyOf": [
+                                      {},
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "http_status"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "charge_usd": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                                "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "charge_basis": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "clause": {
+                                    "type": "string",
+                                    "enum": [
+                                      "rule",
+                                      "NO_RESULT",
+                                      "PROVIDER_ERROR",
+                                      "TIMED_OUT",
+                                      "INTERNAL"
+                                    ]
+                                  },
+                                  "quantity": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "clause",
+                                  "quantity"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "stoppable": {
+                            "type": "boolean"
+                          },
+                          "stop_requested_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "ISO-8601 UTC timestamp",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "description": "ISO-8601 UTC timestamp",
+                            "format": "date-time"
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "ISO-8601 UTC timestamp",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "ISO-8601 UTC timestamp",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "run_url",
+                          "provider",
+                          "endpoint",
+                          "endpoint_version",
+                          "status",
+                          "failure",
+                          "input",
+                          "output",
+                          "provider_response",
+                          "charge_usd",
+                          "charge_basis",
+                          "stoppable",
+                          "stop_requested_at",
+                          "created_at",
+                          "started_at",
+                          "completed_at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RateLimited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists runs in reverse order of creation time, with optional filters on status, provider, and endpoint. This endpoint uses cursor pagination. The list is scoped by the effective policy: runs of an endpoint this key cannot run are not readable either.",
+        "summary": "List runs"
+      }
+    },
+    "/v1/runs/{runId}": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "operationId": "runs-get",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "run_url": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]*$"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "pattern": "^\\/.+$"
+                    },
+                    "endpoint_version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "QUEUED",
+                        "RUNNING",
+                        "COMPLETED",
+                        "FAILED",
+                        "STOPPED"
+                      ]
+                    },
+                    "failure": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "TIMED_OUT",
+                                "INTERNAL"
+                              ]
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "message"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "input": {
+                      "type": "object"
+                    },
+                    "output": {},
+                    "provider_response": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "http_status": {
+                              "type": "integer",
+                              "minimum": 100,
+                              "maximum": 599
+                            },
+                            "error": {
+                              "anyOf": [
+                                {},
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "http_status"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "charge_usd": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                          "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "charge_basis": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "clause": {
+                              "type": "string",
+                              "enum": [
+                                "rule",
+                                "NO_RESULT",
+                                "PROVIDER_ERROR",
+                                "TIMED_OUT",
+                                "INTERNAL"
+                              ]
+                            },
+                            "quantity": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "clause",
+                            "quantity"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stoppable": {
+                      "type": "boolean"
+                    },
+                    "stop_requested_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp",
+                      "format": "date-time"
+                    },
+                    "started_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "completed_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "run_url",
+                    "provider",
+                    "endpoint",
+                    "endpoint_version",
+                    "status",
+                    "failure",
+                    "input",
+                    "output",
+                    "provider_response",
+                    "charge_usd",
+                    "charge_basis",
+                    "stoppable",
+                    "stop_requested_at",
+                    "created_at",
+                    "started_at",
+                    "completed_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RateLimited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the current state of one run. When the status is COMPLETED, provider_response is not null: a 2xx body is in output (any JSON shape, null for an empty body), and a non-2xx body is in provider_response.error. When the status is FAILED, failure is not null. Status does not imply that money moved: charge_usd and charge_basis are reported independently, and a FAILED run with a non-zero charge is a normal outcome, not a contradiction.",
+        "summary": "Get run status and output"
+      }
+    },
+    "/v1/runs/{runId}/stop": {
+      "post": {
+        "tags": [
+          "Runs"
+        ],
+        "operationId": "runs-stop",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "run_url": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]*$"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "pattern": "^\\/.+$"
+                    },
+                    "endpoint_version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "QUEUED",
+                        "RUNNING",
+                        "COMPLETED",
+                        "FAILED",
+                        "STOPPED"
+                      ]
+                    },
+                    "failure": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "TIMED_OUT",
+                                "INTERNAL"
+                              ]
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "message"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "input": {
+                      "type": "object"
+                    },
+                    "output": {},
+                    "provider_response": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "http_status": {
+                              "type": "integer",
+                              "minimum": 100,
+                              "maximum": 599
+                            },
+                            "error": {
+                              "anyOf": [
+                                {},
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "http_status"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "charge_usd": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                          "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "charge_basis": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "clause": {
+                              "type": "string",
+                              "enum": [
+                                "rule",
+                                "NO_RESULT",
+                                "PROVIDER_ERROR",
+                                "TIMED_OUT",
+                                "INTERNAL"
+                              ]
+                            },
+                            "quantity": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "clause",
+                            "quantity"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stoppable": {
+                      "type": "boolean"
+                    },
+                    "stop_requested_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp",
+                      "format": "date-time"
+                    },
+                    "started_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "completed_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "ISO-8601 UTC timestamp",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "run_url",
+                    "provider",
+                    "endpoint",
+                    "endpoint_version",
+                    "status",
+                    "failure",
+                    "input",
+                    "output",
+                    "provider_response",
+                    "charge_usd",
+                    "charge_basis",
+                    "stoppable",
+                    "stop_requested_at",
+                    "created_at",
+                    "started_at",
+                    "completed_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RateLimited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requests a stop. Dispatch wins the race: if no provider call has been journaled yet, the run becomes STOPPED immediately, its hold is closed, and the charge is 0. If a call has already been journaled, only stop_requested_at is recorded and the run continues to COMPLETED or FAILED — a result that was paid for is never discarded. A run that is already in a terminal status returns 409, because for billing purposes \"I stopped it\" and \"it had already finished\" are not equivalent and the request must not succeed silently.",
+        "summary": "Stop a run"
+      }
+    },
+    "/v1/balance": {
+      "get": {
+        "tags": [
+          "Balance"
+        ],
+        "operationId": "balance",
+        "parameters": [],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "balance_usd": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                      "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                    },
+                    "held_usd": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                      "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                    },
+                    "available_usd": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                      "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                    }
+                  },
+                  "required": [
+                    "balance_usd",
+                    "held_usd",
+                    "available_usd"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RateLimited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the balance triple: balance (settled funds), held (reservations for in-flight runs), and available (balance minus held — the number a new run is admitted against). This is also the cheapest authentication probe.",
+        "summary": "Get balance, held and available"
+      }
+    },
+    "/v1/balance/history": {
+      "get": {
+        "tags": [
+          "Balance"
+        ],
+        "operationId": "balance-history",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[+-]?\\d*\\.?\\d+(?:[Ee][+-]?\\d+)?$"
+            },
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required": false
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "charge",
+                    "refund",
+                    "topup",
+                    "grant",
+                    "adjustment"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "charge",
+                              "refund",
+                              "topup",
+                              "grant",
+                              "adjustment"
+                            ]
+                          },
+                          "amount_usd": {
+                            "type": "string",
+                            "pattern": "^-?(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$"
+                          },
+                          "balance_after_usd": {
+                            "type": "string",
+                            "pattern": "^(0|[1-9]\\d*)\\.(\\d{2}|\\d{2}\\d{0,3}[1-9])$",
+                            "description": "Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats."
+                          },
+                          "run_id": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "description": "ISO-8601 UTC timestamp",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "amount_usd",
+                          "balance_after_usd",
+                          "run_id",
+                          "description",
+                          "created_at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RateLimited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists every balance movement in reverse time order: charge, refund, topup, grant, and adjustment. Amounts are exact USD decimal strings, signed (a charge is negative): summing them with decimal arithmetic — not floats — reconciles the balance, and each entry carries balance_after_usd. This endpoint uses cursor pagination.",
+        "summary": "List every balance movement"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ValidationFailedEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "validation_failed"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "RateLimitedEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "rate_limited"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "UnauthorizedEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "unauthorized"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "NotFoundEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "not_found"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "EndpointVersionMismatchEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "endpoint_version_mismatch"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "IdempotencyKeyRequiredEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "idempotency_key_required"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "IdempotencyConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "idempotency_conflict"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "EndpointNotPermittedEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "endpoint_not_permitted"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "InsufficientBalanceEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "insufficient_balance"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "ServiceUnavailableEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "service_unavailable"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      },
+      "ConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "conflict"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "control": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "retry_after_ms": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "Bearer"
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "Endpoints"
+    },
+    {
+      "name": "Runs"
+    },
+    {
+      "name": "Balance"
+    }
+  ]
+}
