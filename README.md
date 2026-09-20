@@ -3,6 +3,8 @@
 Open-source Chrome extension for traffic, keywords, backlinks and domain registration,
 powered by [glasser](https://glasser.ai).
 
+[**Install from the Chrome Web Store**](https://chromewebstore.google.com/detail/openseo/egmioohncebomfkepifnhcpddmhoceec)
+
 | Report | Source |
 | --- | --- |
 | Domain registration | Public RDAP registries (free) |
@@ -12,12 +14,27 @@ powered by [glasser](https://glasser.ai).
 
 ## Install
 
-1. [Download the latest release](https://github.com/glasser-ai/openseo/releases/latest) and extract `openseo-VERSION-chrome.zip`.
-2. Open `chrome://extensions`, enable **Developer mode**, and select **Load unpacked**.
-3. Select the extracted folder, open a website, and click OpenSEO.
-4. Connect a [glasser Key](https://app.glasser.ai/keys?utm_source=openseo&utm_medium=readme&utm_campaign=onboarding&utm_content=download) in Settings.
+1. [Add OpenSEO from the Chrome Web Store](https://chromewebstore.google.com/detail/openseo/egmioohncebomfkepifnhcpddmhoceec).
+2. Open a website and select OpenSEO, or press `Alt+D`.
+3. Connect a [glasser Key](https://app.glasser.ai/keys?utm_source=openseo&utm_medium=readme&utm_campaign=onboarding&utm_content=store) in Settings.
 
-To update, replace the files in the same folder and select **Reload** in Chrome.
+Chrome updates the extension itself. Domain registration works straight away; the other
+reports need a Key.
+
+<details>
+<summary>Install from a release archive instead</summary>
+
+Use this to run a specific version, or to verify the published build yourself.
+
+1. [Download a release](https://github.com/glasser-ai/openseo/releases/latest) and extract `openseo-VERSION-chrome.zip`.
+2. Check it against the published `SHA256SUMS` if you want to confirm the archive.
+3. Open `chrome://extensions`, enable **Developer mode**, and select **Load unpacked**.
+4. Select the extracted folder.
+
+Updates are manual: replace the files in the same folder and select **Reload**. Keep the same
+folder to preserve the extension identity and saved settings.
+
+</details>
 
 ## Cache and costs
 

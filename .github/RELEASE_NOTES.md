@@ -1,4 +1,6 @@
-Download the **openseo-…-chrome.zip** file from Assets below. The automatic **Source code** archives require a build first.
+Most people should [install from the Chrome Web Store](https://chromewebstore.google.com/detail/openseo/egmioohncebomfkepifnhcpddmhoceec) and let Chrome keep it updated.
+
+The archive below is for running a specific version or verifying the build yourself. Download **openseo-…-chrome.zip** from Assets; the automatic **Source code** archives require a build first.
 
 ### Install
 

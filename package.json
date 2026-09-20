@@ -5,6 +5,12 @@
   "type": "module",
   "description": "OpenSEO \u2014 an open-source domain inspector powered by glasser.",
   "license": "Apache-2.0",
+  "homepage": "https://github.com/glasser-ai/openseo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glasser-ai/openseo.git"
+  },
+  "bugs": "https://github.com/glasser-ai/openseo/issues",
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
