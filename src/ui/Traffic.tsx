@@ -58,6 +58,10 @@ export function Traffic({ panel }: { readonly panel: TrafficPanel }) {
   const countries = panel.countries ?? [];
   const globalRank = panel.globalRank ?? null;
   const countryRank = panel.countryRank ?? null;
+  // Same reason as the four above: these two arrived later still, and a panel
+  // cached before them carries neither.
+  const categoryRank = panel.categoryRank ?? null;
+  const keywords = panel.keywords ?? [];
   // Slots are assigned across **the whole channel set**, so an unfamiliar
   // channel cannot collide with a known one's colour.
   const slotMap = assignSlots(sources.map((slice) => slice.key));
@@ -132,7 +136,24 @@ export function Traffic({ panel }: { readonly panel: TrafficPanel }) {
             tone={toneOf("site-rank", countryRank.rank)}
           />
         )}
+        {/*
+          Category rank is a **different denominator** from the two ranks above
+          it: #191 among technology sites and #14,504 on the whole web are both
+          true of npmjs.com. So the category has to be named, or the number is
+          unreadable — and it is too long for the caption slot, which is why it
+          goes on its own line below rather than being truncated into a lie.
+
+          Untoned, deliberately. site-rank bands against the global field, where
+          #191 is extraordinary; inside one category it is ordinary, and the
+          same colour would be claiming otherwise.
+        */}
+        {categoryRank && (
+          <Figure value={`#${categoryRank.rank.toLocaleString("en-US")}`} caption="Category rank" />
+        )}
       </div>
+      {categoryRank && (
+        <p className="mt-3 text-small text-muted-foreground">Category · {categoryRank.category}</p>
+      )}
 
       {monthly.length > 0 && (
         <div className="mt-6 border-t border-border pt-4">
@@ -185,6 +206,41 @@ export function Traffic({ panel }: { readonly panel: TrafficPanel }) {
               })}
             />
           </div>
+        </div>
+      )}
+      {keywords.length > 0 && (
+        <div className="mt-6 border-t border-border pt-4">
+          <h3 className="text-body font-semibold">Top keywords</h3>
+          <table className="keyword-table mt-3">
+            {/*
+              Say whose selection this is and on what basis.
+              These are **not** the keywords the domain ranks best for — that is
+              the Search section, which reports a position for each. Similarweb
+              picks five by estimated search value and reports no position at
+              all, so the two tables answer different questions and must not be
+              read as one ranking.
+            */}
+            <caption>Similarweb's five, by estimated search value · no position reported</caption>
+            <thead>
+              <tr>
+                <th scope="col">Keyword</th>
+                <th scope="col">Volume</th>
+                <th scope="col">CPC</th>
+              </tr>
+            </thead>
+            <tbody>
+              {keywords.map((row) => (
+                <tr key={row.keyword}>
+                  <td>{row.keyword}</td>
+                  {/* A 0 CPC is measured — nobody bids on that term. The dash is
+                      for "no such figure", the same distinction the Search
+                      table makes. */}
+                  <td>{row.volume === null ? "—" : row.volume.toLocaleString("en-US")}</td>
+                  <td className="mono">{row.cpc === null ? "—" : `$${row.cpc.toFixed(2)}`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
       {countries.length > 0 && (

@@ -13,6 +13,14 @@
  *   estimatedMonthlyVisits {"2024-08-01": n, ...}
  *   trafficSources        {direct, search, referrals, social, mail, paidReferrals} as 0–1 fractions
  *   topCountries          [{countryCode, countryName, visitsShare}]
+ *   categoryRank          {category, rank}
+ *   topKeywords           [{name, volume, cpc, estimatedValue}]
+ *
+ * The last two were on the wire from the start and simply went unread — the
+ * same Run that costs $0.008 for the visit figures carries them. topKeywords is
+ * **not** the ranked-keywords lookup: Similarweb picks five by estimated search
+ * value and reports no position, while ranked-keywords reports where the domain
+ * actually sits. Two different questions, so they get two different tables.
  * These arrive as real numbers, but everything still goes through num(): a miss
  * comes back as a structurally complete row whose fields are all null or 0, and
  * that must not be read as a hit.
@@ -35,6 +43,13 @@ export type Engagement = {
 };
 
 export type SourceSlice = { readonly key: string; readonly label: string; readonly share: number };
+/** One of Similarweb's five top keywords. No position: this endpoint does not
+    report one, and inventing a dash-filled column would imply it might. */
+export type KeywordSlice = {
+  readonly keyword: string;
+  readonly volume: number | null;
+  readonly cpc: number | null;
+};
 export type MonthlyPoint = { readonly date: string; readonly visits: number };
 export type CountrySlice = { readonly code: string; readonly name: string; readonly share: number };
 
@@ -45,6 +60,8 @@ export type TrafficPanel = {
   readonly globalRank: number | null;
   readonly countryRank: { readonly code: string; readonly rank: number } | null;
   readonly countries: readonly CountrySlice[];
+  readonly categoryRank: { readonly category: string; readonly rank: number } | null;
+  readonly keywords: readonly KeywordSlice[];
 };
 
 /**
@@ -193,6 +210,19 @@ export function extractTraffic(output: unknown): TrafficPanel | null {
   const countryRankValue = num(rawCountryRank?.["rank"]);
   const countryCode = rawCountryRank?.["countryCode"];
 
+  const rawCategoryRank = (row["categoryRank"] ?? null) as Record<string, unknown> | null;
+  const categoryRankValue = num(rawCategoryRank?.["rank"]);
+  const categoryName = rawCategoryRank?.["category"] ?? row["category"];
+
+  const keywords = (Array.isArray(row["topKeywords"]) ? row["topKeywords"] : [])
+    .flatMap((item) => {
+      const keyword = item as Record<string, unknown>;
+      const name = keyword["name"];
+      if (typeof name !== "string" || name.trim() === "") return [];
+      return [{ keyword: name, volume: num(keyword["volume"]), cpc: num(keyword["cpc"]) }];
+    })
+    .slice(0, 5);
+
   const countries = (Array.isArray(row["topCountries"]) ? row["topCountries"] : [])
     .flatMap((item) => {
       const country = item as Record<string, unknown>;
@@ -229,7 +259,31 @@ export function extractTraffic(output: unknown): TrafficPanel | null {
             ? { code: countryCode, rank: countryRankValue }
             : null,
         countries,
+        categoryRank:
+          categoryRankValue !== null && categoryRankValue > 0 && typeof categoryName === "string"
+            ? { category: categoryLabel(categoryName), rank: categoryRankValue }
+            : null,
+        keywords,
       };
+}
+
+/**
+ * "Computers_Electronics_and_Technology/Computers_Electronics_and_Technology"
+ * becomes "Computers electronics and technology".
+ *
+ * The path repeats itself when a domain sits in a parent category with no
+ * subcategory, and printing both halves reads as a stutter rather than a
+ * hierarchy. Distinct halves are kept and joined with a middle dot.
+ */
+export function categoryLabel(raw: string): string {
+  // Each segment is a name in its own right, so each is sentence-cased. Casing
+  // the joined string instead left everything after the dot lowercase.
+  const words = (part: string) => {
+    const text = part.replace(/_+/g, " ").trim().toLowerCase();
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+  const parts = raw.split("/").map(words).filter(Boolean);
+  return parts.filter((part, index) => parts.indexOf(part) === index).join(" · ");
 }
 
 /** "2024-10-01" becomes "October 2024". */
