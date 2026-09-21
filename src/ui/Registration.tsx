@@ -5,7 +5,8 @@ import { toneOf } from "../domain/thresholds.js";
 import { TONE_TEXT } from "./palette.js";
 
 type Reply =
-  /** source is absent on a result cached by a version before it was recorded. */
+  /** source is absent when the TLD's registry could not be resolved, and on a
+      reply from a version older than the field. */
   | { kind: "ok"; value: Record_; fetchedAt: number; source?: string | null }
   | { kind: "unsupported" }
   | { kind: "failed"; reason: string };

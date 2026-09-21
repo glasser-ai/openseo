@@ -52,11 +52,29 @@ it("reports the record URL it read, and saves it for the cached answer", async (
 });
 
 /*
- * A 30-day TTL means entries written before the URL was recorded are answered
- * from the cache for a month. They must still produce a card — plain text
- * rather than a link — instead of an undefined href.
+ * The records last 30 days, so entries written before the URL was recorded are
+ * answered from the cache for a month. Reading the saved field alone left the
+ * link missing for that whole month on every domain already looked at — which
+ * is how the missing link was first reported. The URL is rebuilt instead.
  */
-it("answers a cache entry from before the URL was recorded with no link", async () => {
+it("rebuilds the URL for a cache entry from before it was recorded", async () => {
+  store["openseo:rdap:npmjs.com"] = {
+    fetchedAt: Date.now(),
+    value: { registered: "2010-03-19", expires: null, updated: null, registrar: null },
+  };
+  expect(await lookupRegistration("npmjs.com")).toMatchObject({
+    kind: "ok",
+    source: "https://rdap.verisign.com/com/v1/domain/npmjs.com",
+  });
+  // A cache hit is answered from local storage and must not reach the network
+  // just to decorate a label.
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+/** With no saved bootstrap there is no base to build on, and the panel prints
+    the label as plain text rather than an undefined href. */
+it("leaves the link off when the registry cannot be resolved offline", async () => {
+  store["openseo:rdap-bootstrap"] = undefined;
   store["openseo:rdap:npmjs.com"] = {
     fetchedAt: Date.now(),
     value: { registered: "2010-03-19", expires: null, updated: null, registrar: null },

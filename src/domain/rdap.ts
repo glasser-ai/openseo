@@ -38,10 +38,16 @@ const BOOTSTRAP_TTL_MS = 7 * 86_400_000;
 
 type Bootstrap = { readonly fetchedAt: number; readonly map: Record<string, string> };
 
-async function bootstrap(): Promise<Record<string, string>> {
+/** The saved map, or null when there is none and a fetch would be needed. */
+async function savedBootstrap(): Promise<Record<string, string> | null> {
   const bag = await chrome.storage.local.get(BOOTSTRAP_KEY);
   const cached = bag[BOOTSTRAP_KEY] as Bootstrap | undefined;
-  if (cached && Date.now() - cached.fetchedAt < BOOTSTRAP_TTL_MS) return cached.map;
+  return cached && Date.now() - cached.fetchedAt < BOOTSTRAP_TTL_MS ? cached.map : null;
+}
+
+async function bootstrap(): Promise<Record<string, string>> {
+  const saved = await savedBootstrap();
+  if (saved) return saved;
 
   const response = await fetch(BOOTSTRAP_URL, { headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error(`bootstrap ${response.status}`);
@@ -111,8 +117,7 @@ export type RdapResult =
       readonly fetchedAt: number;
       /**
        * The registry URL this record was read from, so the panel can link to
-       * it. Null for a result cached by a version that did not record it — the
-       * label then renders as plain text until the 30-day TTL expires.
+       * it. Null only when the TLD's registry cannot be resolved at all.
        */
       readonly source: string | null;
     }
@@ -122,6 +127,12 @@ export type RdapResult =
 /** The RDAP record's own URL: the registry base, then /domain/<name>. */
 const recordUrl = (base: string, domain: string): string =>
   `${base.endsWith("/") ? base : `${base}/`}domain/${encodeURIComponent(domain)}`;
+
+/** The same URL from a map that may be missing, for the cached path. */
+const resolve = (map: Record<string, string> | null, domain: string): string | null => {
+  const base = map && baseFor(map, domain);
+  return base ? recordUrl(base, domain) : null;
+};
 
 export async function lookupRegistration(host: string): Promise<RdapResult> {
   // RDAP answers for **the registrable domain**: docs.apify.com must ask about
@@ -133,12 +144,20 @@ export async function lookupRegistration(host: string): Promise<RdapResult> {
     | { fetchedAt: number; value: Registration; source?: string }
     | undefined;
   if (cached && Date.now() - cached.fetchedAt < RESULT_TTL_MS) {
-    return {
-      kind: "ok",
-      value: cached.value,
-      fetchedAt: cached.fetchedAt,
-      source: cached.source ?? null,
-    };
+    /*
+     * A record cached by a version before the URL was recorded has no `source`,
+     * and the records last 30 days — so simply reading the saved field would
+     * have left the panel's link missing for a month on every domain already
+     * looked at, which is exactly how it was first reported.
+     *
+     * The URL is not a fact about the record, though: it is the registry base
+     * for the TLD plus the domain, and that base is in the saved bootstrap map.
+     * So rebuild it. Only the **saved** map is consulted, never a fetch: a cache
+     * hit is answered from local storage, and it is not going to reach the
+     * network to decorate a label.
+     */
+    const saved = cached.source ?? resolve(await savedBootstrap(), domain);
+    return { kind: "ok", value: cached.value, fetchedAt: cached.fetchedAt, source: saved };
   }
 
   try {
