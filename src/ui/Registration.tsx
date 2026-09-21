@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import type { Registration as Record_ } from "../domain/rdap.js";
+import { type Registration as Record_, rdapViewerUrl } from "../domain/rdap.js";
 import { registrableDomain } from "../domain/site.js";
 import { toneOf } from "../domain/thresholds.js";
 import { TONE_TEXT } from "./palette.js";
 
 type Reply =
-  /** source is absent when the TLD's registry could not be resolved, and on a
-      reply from a version older than the field. */
-  | { kind: "ok"; value: Record_; fetchedAt: number; source?: string | null }
+  | { kind: "ok"; value: Record_; fetchedAt: number }
   | { kind: "unsupported" }
   | { kind: "failed"; reason: string };
 
@@ -42,7 +40,6 @@ export function Registration({ domain }: { readonly domain: string }) {
   // worth the space it takes.
   if (state === null || state.kind !== "ok") return null;
   const { registered, expires, registrar } = state.value;
-  const source = state.source ?? null;
   if (registered === null && expires === null) return null;
 
   return (
@@ -94,25 +91,20 @@ export function Registration({ domain }: { readonly domain: string }) {
         {/*
           The provenance line is the claim; the link is where to check it.
           
-          It names a record and, until now, gave no way to open one — the only
-          figures in the panel a reader could not trace back. This is the exact
-          registry URL the dates were read from, which is also what makes the
-          arrow honest: not the registry's home page, but the record itself.
-          Same link style as View Run on the paid cards.
+          It named a record and gave no way to open one — the only figures in
+          the panel a reader could not trace back. The link goes to a **readable
+          copy** of that record, not to the JSON this panel parses: see
+          rdapViewerUrl. Same link style as View Run on the paid cards.
         */}
-        {source ? (
-          <a
-            href={source}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline decoration-muted-foreground/50 underline-offset-3 hover:text-foreground hover:decoration-current"
-            title="Open this domain's RDAP record at the registry"
-          >
-            Public registry record (RDAP) ↗
-          </a>
-        ) : (
-          "Public registry record (RDAP)"
-        )}
+        <a
+          href={rdapViewerUrl(domain)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-muted-foreground/50 underline-offset-3 hover:text-foreground hover:decoration-current"
+          title="Read this domain's registry record"
+        >
+          Public registry record (RDAP) ↗
+        </a>
       </p>
     </section>
   );

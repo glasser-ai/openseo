@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { lookupRegistration } from "../rdap.js";
+import { lookupRegistration, rdapViewerUrl } from "../rdap.js";
 
 const RECORD = {
   events: [
@@ -35,50 +35,27 @@ beforeEach(() => {
 });
 
 /*
- * The panel links its provenance line to this URL, and the link is the only
- * way a reader can check the dates against the registry. It travels through
- * chrome.storage, where a renamed field fails silently — the line would simply
- * stop being a link, with nothing to say why.
+ * The panel's provenance link is for **a person**, so it must not be the URL
+ * this module fetches: that one answers with application/rdap+json and lands a
+ * reader in raw JSON. It also asks about the registrable domain, the same one
+ * the record is about — a link to docs.apify.com would 404 at the registry.
  */
-it("reports the record URL it read, and saves it for the cached answer", async () => {
+it("sends a reader to a rendered record for the registrable domain", () => {
+  expect(rdapViewerUrl("docs.apify.com")).toBe(
+    "https://client.rdap.org/?type=domain&object=apify.com",
+  );
+});
+
+/** A record lasts 30 days, and reading it back must cost no network. */
+it("answers a second lookup from the cache", async () => {
   const fresh = await lookupRegistration("www.npmjs.com");
-  expect(fresh).toMatchObject({
-    kind: "ok",
-    source: "https://rdap.verisign.com/com/v1/domain/npmjs.com",
-  });
-  const cached = await lookupRegistration("npmjs.com");
+  expect(fresh).toMatchObject({ kind: "ok", value: { registrar: "MarkMonitor Inc." } });
+  expect(await lookupRegistration("npmjs.com")).toMatchObject({ kind: "ok" });
   expect(fetch).toHaveBeenCalledTimes(1);
-  expect(cached).toMatchObject({ source: "https://rdap.verisign.com/com/v1/domain/npmjs.com" });
 });
 
-/*
- * The records last 30 days, so entries written before the URL was recorded are
- * answered from the cache for a month. Reading the saved field alone left the
- * link missing for that whole month on every domain already looked at — which
- * is how the missing link was first reported. The URL is rebuilt instead.
- */
-it("rebuilds the URL for a cache entry from before it was recorded", async () => {
-  store["openseo:rdap:npmjs.com"] = {
-    fetchedAt: Date.now(),
-    value: { registered: "2010-03-19", expires: null, updated: null, registrar: null },
-  };
-  expect(await lookupRegistration("npmjs.com")).toMatchObject({
-    kind: "ok",
-    source: "https://rdap.verisign.com/com/v1/domain/npmjs.com",
-  });
-  // A cache hit is answered from local storage and must not reach the network
-  // just to decorate a label.
-  expect(fetch).not.toHaveBeenCalled();
-});
-
-/** With no saved bootstrap there is no base to build on, and the panel prints
-    the label as plain text rather than an undefined href. */
-it("leaves the link off when the registry cannot be resolved offline", async () => {
-  store["openseo:rdap-bootstrap"] = undefined;
-  store["openseo:rdap:npmjs.com"] = {
-    fetchedAt: Date.now(),
-    value: { registered: "2010-03-19", expires: null, updated: null, registrar: null },
-  };
-  expect(await lookupRegistration("npmjs.com")).toMatchObject({ kind: "ok", source: null });
-  expect(fetch).not.toHaveBeenCalled();
+/** IANA lists no RDAP service for some TLDs (.io among them), and a card with
+    no record behind it is not worth the space. */
+it("reports an unresolvable TLD as unsupported", async () => {
+  expect(await lookupRegistration("example.test")).toEqual({ kind: "unsupported" });
 });

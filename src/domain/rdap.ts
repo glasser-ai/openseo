@@ -38,16 +38,10 @@ const BOOTSTRAP_TTL_MS = 7 * 86_400_000;
 
 type Bootstrap = { readonly fetchedAt: number; readonly map: Record<string, string> };
 
-/** The saved map, or null when there is none and a fetch would be needed. */
-async function savedBootstrap(): Promise<Record<string, string> | null> {
+async function bootstrap(): Promise<Record<string, string>> {
   const bag = await chrome.storage.local.get(BOOTSTRAP_KEY);
   const cached = bag[BOOTSTRAP_KEY] as Bootstrap | undefined;
-  return cached && Date.now() - cached.fetchedAt < BOOTSTRAP_TTL_MS ? cached.map : null;
-}
-
-async function bootstrap(): Promise<Record<string, string>> {
-  const saved = await savedBootstrap();
-  if (saved) return saved;
+  if (cached && Date.now() - cached.fetchedAt < BOOTSTRAP_TTL_MS) return cached.map;
 
   const response = await fetch(BOOTSTRAP_URL, { headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error(`bootstrap ${response.status}`);
@@ -111,28 +105,26 @@ export function parseRdap(body: unknown): Registration | null {
 }
 
 export type RdapResult =
-  | {
-      readonly kind: "ok";
-      readonly value: Registration;
-      readonly fetchedAt: number;
-      /**
-       * The registry URL this record was read from, so the panel can link to
-       * it. Null only when the TLD's registry cannot be resolved at all.
-       */
-      readonly source: string | null;
-    }
+  | { readonly kind: "ok"; readonly value: Registration; readonly fetchedAt: number }
   | { readonly kind: "unsupported" }
   | { readonly kind: "failed"; readonly reason: string };
 
-/** The RDAP record's own URL: the registry base, then /domain/<name>. */
-const recordUrl = (base: string, domain: string): string =>
-  `${base.endsWith("/") ? base : `${base}/`}domain/${encodeURIComponent(domain)}`;
-
-/** The same URL from a map that may be missing, for the cached path. */
-const resolve = (map: Record<string, string> | null, domain: string): string | null => {
-  const base = map && baseFor(map, domain);
-  return base ? recordUrl(base, domain) : null;
-};
+/**
+ * Where to send **a person** who wants to read the registry record.
+ *
+ * Not the registry URL this module fetches: that answers with
+ * application/rdap+json, so following it lands someone in a wall of raw JSON.
+ * client.rdap.org is a browser RDAP client that resolves the TLD itself and
+ * renders the record as a page.
+ *
+ * Note this does not contradict the note above about **not fetching** through
+ * rdap.org. That one is about programmatic requests, which its Cloudflare
+ * answers with 403. This is a link a person clicks in their own browser, where
+ * the redirector is the part that makes it work: one URL for every TLD, with no
+ * bootstrap lookup to build it.
+ */
+export const rdapViewerUrl = (domain: string): string =>
+  `https://client.rdap.org/?type=domain&object=${encodeURIComponent(registrableDomain(domain))}`;
 
 export async function lookupRegistration(host: string): Promise<RdapResult> {
   // RDAP answers for **the registrable domain**: docs.apify.com must ask about
@@ -140,24 +132,9 @@ export async function lookupRegistration(host: string): Promise<RdapResult> {
   const domain = registrableDomain(host);
   const key = `${RESULT_PREFIX}${domain}`;
   const bag = await chrome.storage.local.get(key);
-  const cached = bag[key] as
-    | { fetchedAt: number; value: Registration; source?: string }
-    | undefined;
+  const cached = bag[key] as { fetchedAt: number; value: Registration } | undefined;
   if (cached && Date.now() - cached.fetchedAt < RESULT_TTL_MS) {
-    /*
-     * A record cached by a version before the URL was recorded has no `source`,
-     * and the records last 30 days — so simply reading the saved field would
-     * have left the panel's link missing for a month on every domain already
-     * looked at, which is exactly how it was first reported.
-     *
-     * The URL is not a fact about the record, though: it is the registry base
-     * for the TLD plus the domain, and that base is in the saved bootstrap map.
-     * So rebuild it. Only the **saved** map is consulted, never a fetch: a cache
-     * hit is answered from local storage, and it is not going to reach the
-     * network to decorate a label.
-     */
-    const saved = cached.source ?? resolve(await savedBootstrap(), domain);
-    return { kind: "ok", value: cached.value, fetchedAt: cached.fetchedAt, source: saved };
+    return { kind: "ok", value: cached.value, fetchedAt: cached.fetchedAt };
   }
 
   try {
@@ -165,14 +142,14 @@ export async function lookupRegistration(host: string): Promise<RdapResult> {
     // Some TLD registries are not listed for RDAP in IANA's bootstrap (.io, for
     // one).
     if (!base) return { kind: "unsupported" };
-    const url = recordUrl(base, domain);
+    const url = `${base.endsWith("/") ? base : `${base}/`}domain/${encodeURIComponent(domain)}`;
     const response = await fetch(url, { headers: { Accept: "application/rdap+json" } });
     if (response.status === 404) return { kind: "unsupported" };
     if (!response.ok) return { kind: "failed", reason: `registry returned ${response.status}` };
     const value = parseRdap(await response.json());
     if (!value) return { kind: "unsupported" };
-    await chrome.storage.local.set({ [key]: { fetchedAt: Date.now(), value, source: url } });
-    return { kind: "ok", value, fetchedAt: Date.now(), source: url };
+    await chrome.storage.local.set({ [key]: { fetchedAt: Date.now(), value } });
+    return { kind: "ok", value, fetchedAt: Date.now() };
   } catch {
     return { kind: "failed", reason: "could not reach the domain registry" };
   }
