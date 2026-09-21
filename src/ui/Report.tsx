@@ -21,32 +21,32 @@ import type { ReportId, ResultState, useReport } from "./useReport.js";
 /** Which reports each section shows, and which of them it buys on open. */
 const SECTIONS: Record<Tab, { readonly title: string; readonly ids: readonly ReportId[] }> = {
   /*
-   * ids are the ones **bought automatically when the overview opens**, not
-   * everything the overview shows.
+   * The overview buys **all five**, in the order it lists them.
    *
-   * All five have to be displayed, or "At a glance" misses two and is not a
-   * glance at anything. Only the three cheap ones are bought automatically:
-   * backlinks at $0.024 and ranked keywords at $0.13 together cost seven times
-   * the other three, so buying them here would spend $0.176 just to open the
-   * panel. Those two are bought when their own section opens.
+   * It used to buy only the three cheap ones and leave backlinks ($0.024) and
+   * ranked keywords ($0.13) to their own sections, to keep the cost of opening
+   * the panel near $0.025. What that produced was two rows stuck on an em dash
+   * that nothing would ever fill, indistinguishable from a result still on its
+   * way — so "At a glance" asked people to wait for something nobody had
+   * ordered.
+   *
+   * The panel is injected only by an explicit gesture (an action click, Alt+D
+   * or the context menu; see mount.content.ts, which matches no page on its
+   * own), so opening it **is** the request for the glance. That one gesture
+   * costs about $0.18 on a domain with nothing saved, and PANEL_TTL_MS then
+   * makes every reopen within 7 days free. Against the default $5/day that is
+   * roughly 28 new domains.
    */
-  overview: { title: "Overview", ids: ["domain-rating", "traffic", "organic-traffic"] },
+  overview: {
+    title: "Overview",
+    ids: ["domain-rating", "traffic", "organic-traffic", "backlinks", "ranked-keywords"],
+  },
   traffic: { title: "Traffic", ids: ["traffic"] },
   search: { title: "Search", ids: ["organic-traffic", "ranked-keywords"] },
   backlinks: { title: "Backlinks", ids: ["domain-rating", "backlinks"] },
 };
 
 const TITLE = REPORT_TITLE;
-
-/** The overview lists **all** five; SECTIONS.overview.ids above is only the
-    subset bought automatically. */
-const OVERVIEW_ROWS: readonly ReportId[] = [
-  "domain-rating",
-  "traffic",
-  "organic-traffic",
-  "backlinks",
-  "ranked-keywords",
-];
 
 export function Report({
   domain,
@@ -91,13 +91,13 @@ export function Report({
   });
 
   if (tab === "overview") {
-    const anyRunning = OVERVIEW_ROWS.some((id) => results[id]?.running === true);
-    const firstFailure = OVERVIEW_ROWS.map((id) => results[id]?.error).find(
-      (reason): reason is string => typeof reason === "string",
-    );
+    const anyRunning = ids.some((id) => results[id]?.running === true);
+    const firstFailure = ids
+      .map((id) => results[id]?.error)
+      .find((reason): reason is string => typeof reason === "string");
     // Refresh only reports with saved results. Each explicit lookup gets a new identity.
-    const refreshable = OVERVIEW_ROWS.filter((id) => results[id]?.entry != null);
-    const savedLoading = OVERVIEW_ROWS.some((id) => results[id].loading);
+    const refreshable = ids.filter((id) => results[id]?.entry != null);
+    const savedLoading = ids.some((id) => results[id].loading);
     return (
       <div className="flex flex-col gap-4 py-4">
         {!hasKey && <ConnectKey onSettings={onSettings} />}
@@ -106,9 +106,9 @@ export function Report({
         <section className="report-card">
           <h2 className="text-section font-semibold tracking-tight">At a glance</h2>
           <ul className="m-0 mt-3 list-none p-0">
-            {OVERVIEW_ROWS.map((id, index) => {
+            {ids.map((id, index) => {
               const state = results[id];
-              const line = headline(id, state);
+              const line = headline(id, state, hasKey);
               return (
                 <li key={id}>
                   <button
@@ -246,7 +246,7 @@ const TAB_OF: Record<ReportId, Tab> = {
 
 /** One summary row: name, number, age. If it was never bought, say so rather
     than invent a figure. */
-function headline(id: ReportId, state: ResultState | undefined) {
+function headline(id: ReportId, state: ResultState | undefined, hasKey: boolean) {
   const entry = state?.entry;
   const payload = entry?.payload;
   const age = entry ? ageOf(entry.fetchedAt) : "—";
@@ -326,9 +326,18 @@ function headline(id: ReportId, state: ResultState | undefined) {
       quiet: true,
       tone: "neutral" as Tone,
     };
+  /*
+   * Nothing saved and nothing on its way.
+   *
+   * With a Key this is the instant before the section's first fetch fires. With
+   * no Key it is permanent, and an em dash there says the same thing a pending
+   * row says — the state the summary was stuck in before the overview bought
+   * all five. So name the reason instead: the card above offers the Key, and
+   * this row stops pretending to be busy.
+   */
   return {
     label: TITLE[id],
-    value: "—",
+    value: hasKey ? "—" : "Needs a Key",
     age,
     stale,
     busy,

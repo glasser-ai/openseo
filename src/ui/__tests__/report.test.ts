@@ -138,6 +138,35 @@ it("automatically fetches missing results without price approval", async () => {
   expect(purchases).toHaveLength(1);
   expect(purchases[0]?.[0]).toMatchObject({ lookup: "backlinks", force: false });
 });
+/*
+ * The overview displays five rows and has to buy **all five**.
+ *
+ * It once bought three of them, leaving Backlinks and Ranking keywords on an em
+ * dash no fetch would ever replace — a permanent loading state for reports
+ * nobody had ordered. Trim SECTIONS.overview.ids back to the cheap three and
+ * this goes red.
+ */
+it("buys every summary row when the overview opens", async () => {
+  await render(true, "overview");
+  const bought = send.mock.calls
+    .filter(([message]) => message.type === "openseo:lookup")
+    .map(([message]) => message.lookup);
+  // domain-rating has a saved result in the harness, so it is reused, not bought.
+  expect(new Set(bought)).toEqual(new Set(["organic-traffic", "backlinks", "ranked-keywords"]));
+  expect(send.mock.calls.filter(([message]) => message.type === "openseo:traffic")).toHaveLength(1);
+  expect(
+    send.mock.calls
+      .filter(([message]) => /^openseo:(lookup|traffic)$/.test(message.type))
+      .every(([message]) => (message as { force?: boolean }).force === false),
+  ).toBe(true);
+});
+it("names the missing Key rather than leaving a summary row on an em dash", async () => {
+  await render(false, "overview");
+  const row = Array.from(container.querySelectorAll("li button")).find((button) =>
+    button.textContent?.startsWith("Ranking keywords"),
+  )!;
+  expect(row.textContent).toContain("Needs a Key");
+});
 it("shows Backlinks rather than referring domains in the summary", async () => {
   const original = send.getMockImplementation()!;
   send.mockImplementation(async (message) =>

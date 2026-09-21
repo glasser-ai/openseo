@@ -39,8 +39,11 @@ folder to preserve the extension identity and saved settings.
 ## Cache and costs
 
 Reports are cached locally for **7 days**, or **1 day** for empty results, and reused across tabs
-and browser restarts. Opening a section automatically fetches missing or outdated results.
-**Refresh** requests new data. New lookups use your glasser balance; cached results are free to view.
+and browser restarts. Opening a section automatically fetches missing or outdated results. Overview
+is a section of five, so opening the panel on a domain with nothing saved fetches all five, about
+**$0.18**; reopening it within the 7 days costs nothing. The default $5/day covers roughly 28 new
+domains. **Refresh** requests new data. New lookups use your glasser balance; cached results are
+free to view.
 
 Settings provides estimated budgets of **$5/day** and **$20/month** per browser profile.
 Price changes can cause charges to exceed them. Set either to zero to stop new paid lookups;
