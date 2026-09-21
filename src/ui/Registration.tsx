@@ -51,15 +51,29 @@ export function Registration({ domain }: { readonly domain: string }) {
         </span>
       </div>
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-4">
+        {/*
+          The **date** is the figure, and the age is its caption.
+          
+          It was the other way round: "16 yr" large, with the date demoted to
+          the grey line under it. But the two blocks sit side by side, and the
+          one beside this prints a date — so the pair read as two different
+          kinds of thing, and the eye had to convert one back into the other to
+          compare them. Registered 2010-03-19 against expires 2031-03-19 is one
+          comparison; "16 yr" against 2031-03-19 is two.
+          
+          The age keeps the colour band, because that is what the band is for:
+          the date carries the fact, the colour carries whether it is old.
+        */}
         {registered !== null && (
           <div className="min-w-0">
-            <div
-              className={`text-figure font-semibold leading-none tabular-nums ${TONE_TEXT[toneOf("domain-age", months(registered))]}`}
-            >
-              {age(registered)}
+            <div className="text-figure font-semibold leading-none tabular-nums">
+              {day(registered)}
             </div>
             <div className="mt-1 text-small text-muted-foreground">
-              old · registered {day(registered)}
+              registered ·{" "}
+              <span className={TONE_TEXT[toneOf("domain-age", months(registered))]}>
+                {age(registered)}
+              </span>
             </div>
           </div>
         )}
@@ -87,11 +101,17 @@ function months(iso: string): number {
   return Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / (30.44 * 86_400_000)));
 }
 
-/** "18 yr" or "7 mo" — how old a domain is tends to be more useful than the
-    exact date. */
+/**
+ * "18 yr old" or "7 mo old", to go under the registration date — the date says
+ * when, and this says how long ago without the reader doing the arithmetic.
+ *
+ * The whole phrase is built here, including the word "old", because the first
+ * month has no duration to qualify: a domain registered last week is "new", and
+ * "new old" is not a phrase.
+ */
 function age(iso: string): string {
   const total = months(iso);
   if (total < 1) return "new";
-  if (total < 24) return `${total} mo`;
-  return `${Math.floor(total / 12)} yr`;
+  if (total < 24) return `${total} mo old`;
+  return `${Math.floor(total / 12)} yr old`;
 }
