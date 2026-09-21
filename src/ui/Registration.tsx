@@ -36,9 +36,14 @@ export function Registration({ domain }: { readonly domain: string }) {
     };
   }, [domain]);
 
+  // Still asking the registry. Without this the card was absent and then
+  // suddenly present, shoving "At a glance" down the panel as it landed.
+  if (state === null) return <Placeholder domain={domain} />;
   // On a miss the whole block is omitted: a card saying "not found" is not
-  // worth the space it takes.
-  if (state === null || state.kind !== "ok") return null;
+  // worth the space it takes. The placeholder above then disappears, which
+  // moves the panel once — but a registry miss is the rare case (a TLD IANA
+  // lists no RDAP service for), and the common one now does not move at all.
+  if (state.kind !== "ok") return null;
   const { registered, expires, registrar } = state.value;
   if (registered === null && expires === null) return null;
 
@@ -106,6 +111,48 @@ export function Registration({ domain }: { readonly domain: string }) {
           Public registry record (RDAP) ↗
         </a>
       </p>
+    </section>
+  );
+}
+
+/**
+ * The card's own shape, drawn in grey.
+ *
+ * The heading is real: the domain and the word free are known before the
+ * registry answers, and greying out what we already know says less than
+ * printing it.
+ *
+ * The bars are sized to the text they stand in for, so nothing shifts when the
+ * dates arrive: 20px for a figure at leading-none, and a 12px bar inside 3px of
+ * padding for each 18px line of small text.
+ */
+function Placeholder({ domain }: { readonly domain: string }) {
+  return (
+    <section className="report-card">
+      <div className="flex flex-wrap items-baseline gap-2">
+        <h2 className="text-section font-semibold tracking-tight">Domain</h2>
+        <span className="min-w-0 break-all text-small text-muted-foreground">
+          {registrableDomain(domain)} · free
+        </span>
+      </div>
+      <div aria-hidden>
+        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-4">
+          {[
+            { figure: "w-32", caption: "w-32" },
+            { figure: "w-32", caption: "w-16" },
+          ].map((block) => (
+            <div key={block.caption} className="min-w-0">
+              <div className={`h-5 animate-pulse rounded-sm bg-muted ${block.figure}`} />
+              <div className="mt-1 py-[3px]">
+                <div className={`h-3 animate-pulse rounded-sm bg-muted ${block.caption}`} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 border-t border-border pt-3">
+          <div className="my-[3px] h-3 w-56 animate-pulse rounded-sm bg-muted" />
+        </div>
+      </div>
     </section>
   );
 }
