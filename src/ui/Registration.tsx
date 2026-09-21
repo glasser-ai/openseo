@@ -5,7 +5,8 @@ import { toneOf } from "../domain/thresholds.js";
 import { TONE_TEXT } from "./palette.js";
 
 type Reply =
-  | { kind: "ok"; value: Record_; fetchedAt: number }
+  /** source is absent on a result cached by a version before it was recorded. */
+  | { kind: "ok"; value: Record_; fetchedAt: number; source?: string | null }
   | { kind: "unsupported" }
   | { kind: "failed"; reason: string };
 
@@ -40,6 +41,7 @@ export function Registration({ domain }: { readonly domain: string }) {
   // worth the space it takes.
   if (state === null || state.kind !== "ok") return null;
   const { registered, expires, registrar } = state.value;
+  const source = state.source ?? null;
   if (registered === null && expires === null) return null;
 
   return (
@@ -87,7 +89,29 @@ export function Registration({ domain }: { readonly domain: string }) {
         )}
       </div>
       <p className="mt-4 border-t border-border pt-3 text-small text-muted-foreground">
-        {registrar ? `${registrar} · ` : ""}Public registry record (RDAP)
+        {registrar ? `${registrar} · ` : ""}
+        {/*
+          The provenance line is the claim; the link is where to check it.
+          
+          It names a record and, until now, gave no way to open one — the only
+          figures in the panel a reader could not trace back. This is the exact
+          registry URL the dates were read from, which is also what makes the
+          arrow honest: not the registry's home page, but the record itself.
+          Same link style as View Run on the paid cards.
+        */}
+        {source ? (
+          <a
+            href={source}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline decoration-muted-foreground/50 underline-offset-3 hover:text-foreground hover:decoration-current"
+            title="Open this domain's RDAP record at the registry"
+          >
+            Public registry record (RDAP) ↗
+          </a>
+        ) : (
+          "Public registry record (RDAP)"
+        )}
       </p>
     </section>
   );

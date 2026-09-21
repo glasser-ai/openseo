@@ -105,9 +105,23 @@ export function parseRdap(body: unknown): Registration | null {
 }
 
 export type RdapResult =
-  | { readonly kind: "ok"; readonly value: Registration; readonly fetchedAt: number }
+  | {
+      readonly kind: "ok";
+      readonly value: Registration;
+      readonly fetchedAt: number;
+      /**
+       * The registry URL this record was read from, so the panel can link to
+       * it. Null for a result cached by a version that did not record it — the
+       * label then renders as plain text until the 30-day TTL expires.
+       */
+      readonly source: string | null;
+    }
   | { readonly kind: "unsupported" }
   | { readonly kind: "failed"; readonly reason: string };
+
+/** The RDAP record's own URL: the registry base, then /domain/<name>. */
+const recordUrl = (base: string, domain: string): string =>
+  `${base.endsWith("/") ? base : `${base}/`}domain/${encodeURIComponent(domain)}`;
 
 export async function lookupRegistration(host: string): Promise<RdapResult> {
   // RDAP answers for **the registrable domain**: docs.apify.com must ask about
@@ -115,9 +129,16 @@ export async function lookupRegistration(host: string): Promise<RdapResult> {
   const domain = registrableDomain(host);
   const key = `${RESULT_PREFIX}${domain}`;
   const bag = await chrome.storage.local.get(key);
-  const cached = bag[key] as { fetchedAt: number; value: Registration } | undefined;
+  const cached = bag[key] as
+    | { fetchedAt: number; value: Registration; source?: string }
+    | undefined;
   if (cached && Date.now() - cached.fetchedAt < RESULT_TTL_MS) {
-    return { kind: "ok", value: cached.value, fetchedAt: cached.fetchedAt };
+    return {
+      kind: "ok",
+      value: cached.value,
+      fetchedAt: cached.fetchedAt,
+      source: cached.source ?? null,
+    };
   }
 
   try {
@@ -125,14 +146,14 @@ export async function lookupRegistration(host: string): Promise<RdapResult> {
     // Some TLD registries are not listed for RDAP in IANA's bootstrap (.io, for
     // one).
     if (!base) return { kind: "unsupported" };
-    const url = `${base.endsWith("/") ? base : `${base}/`}domain/${encodeURIComponent(domain)}`;
+    const url = recordUrl(base, domain);
     const response = await fetch(url, { headers: { Accept: "application/rdap+json" } });
     if (response.status === 404) return { kind: "unsupported" };
     if (!response.ok) return { kind: "failed", reason: `registry returned ${response.status}` };
     const value = parseRdap(await response.json());
     if (!value) return { kind: "unsupported" };
-    await chrome.storage.local.set({ [key]: { fetchedAt: Date.now(), value } });
-    return { kind: "ok", value, fetchedAt: Date.now() };
+    await chrome.storage.local.set({ [key]: { fetchedAt: Date.now(), value, source: url } });
+    return { kind: "ok", value, fetchedAt: Date.now(), source: url };
   } catch {
     return { kind: "failed", reason: "could not reach the domain registry" };
   }
