@@ -1,9 +1,18 @@
 name: CI
 
+# A release is **a version bump on main**, not a tag anyone pushes by hand.
+#
+# This used to also trigger on tags. Tagging the tip of main then fired the
+# whole workflow twice for one commit — once per ref — and left the tag free to
+# disagree with package.json, which package-release.mjs could only catch after
+# the wrong tag was already public. Now the release job derives the tag from
+# package.json, so the two cannot differ, and nothing listens on tag pushes.
+#
+# The cost: a release can no longer be cut from an older commit by tagging it.
+# Releases are whatever main says.
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -18,6 +27,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      release: ${{ steps.version.outputs.release }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -25,14 +37,28 @@ jobs:
         with:
           node-version: 22.22.2
           cache: pnpm
+      # Decided here rather than in the release job, so that job is **skipped**
+      # on an ordinary commit instead of starting a runner to conclude there is
+      # nothing to release. An existing tag is what says "already released":
+      # without that gate, the second push at one version fails on git push and
+      # paints every ordinary commit red.
+      - name: Decide whether this version is new
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "Already released: v$version"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm check-types
       - run: pnpm test
       - run: pnpm build
       - name: Package production extension
-        env:
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
         run: node scripts/package-release.mjs
       - uses: actions/upload-artifact@v4
         with:
@@ -45,7 +71,9 @@ jobs:
           retention-days: 14
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    if: >-
+      github.ref == 'refs/heads/main' && github.event_name == 'push' &&
+      needs.check.outputs.release == 'true'
     needs: [check]
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -60,11 +88,18 @@ jobs:
       - name: Verify archive checksum
         working-directory: release-assets
         run: sha256sum --check SHA256SUMS
+      # Tagging with the default token deliberately does **not** start another
+      # run: workflows are not triggered by GITHUB_TOKEN pushes, which is what
+      # keeps one bump to one build.
+      - name: Tag the release
+        run: |
+          git tag "${{ needs.check.outputs.tag }}"
+          git push origin "${{ needs.check.outputs.tag }}"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ needs.check.outputs.tag }}
         run: |
           gh release create "$RELEASE_TAG" release-assets/*.zip release-assets/SHA256SUMS \
             --verify-tag --title "OpenSEO $RELEASE_TAG" \

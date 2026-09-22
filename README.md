@@ -67,7 +67,9 @@ Load `.output/chrome-mv3` through **Load unpacked** to use a local production bu
 Run `pnpm lint`, `pnpm check-types`, `pnpm test` and `pnpm build` before contributing.
 See [Contributing](CONTRIBUTING.md) and [Security](SECURITY.md).
 
-To release, update `package.json`, push to `main`, then push a matching `vVERSION` tag.
+To release, update `package.json` and push to `main`. CI tags `vVERSION`, publishes the
+GitHub Release with the archive and `SHA256SUMS`, and does nothing when the version is
+unchanged. Tags are not pushed by hand.
 CI checks the code, builds the extension, and publishes the ZIP and SHA-256 checksum.
 
 ## License

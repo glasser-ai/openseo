@@ -8,4 +8,4 @@
 
 ## Commits
 
-Release: bump `package.json`, merge, push the matching `vVERSION` tag.
+Release: bump `package.json` and merge to `main`. CI tags `vVERSION` and publishes the Release — never push a tag by hand.
