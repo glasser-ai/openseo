@@ -10,6 +10,13 @@ import { Schema } from "effect";
 
 const UsdAmount = Schema.String;
 
+/**
+ * The contract closes this union with an open `{ type: string }` member: a rule
+ * shape added upstream must still decode, or every lookup priced by it fails
+ * before a Run exists — which is exactly what happened when
+ * `base_plus_per_result` arrived. The ceiling of such a rule is unknown, and
+ * price.ts refuses to reserve against it rather than guessing.
+ */
 export const PriceRule = Schema.Union([
   Schema.Struct({ type: Schema.Literal("flat"), amount_usd: UsdAmount }),
   Schema.Struct({
@@ -18,7 +25,30 @@ export const PriceRule = Schema.Union([
     cap_usd: UsdAmount,
     partial_usd: Schema.optionalKey(UsdAmount),
   }),
+  Schema.Struct({
+    type: Schema.Literal("per_token"),
+    per_million_input_tokens_usd: UsdAmount,
+    cap_usd: UsdAmount,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("base_plus_per_result"),
+    base_usd: UsdAmount,
+    included_results: Schema.Int,
+    per_extra_result_usd: UsdAmount,
+    cap_usd: UsdAmount,
+    unit: Schema.optionalKey(Schema.String),
+  }),
+  Schema.StructWithRest(Schema.Struct({ type: Schema.String }), [
+    Schema.Record(Schema.String, Schema.Unknown),
+  ]),
 ]);
+
+/** How the server itself spells the price for a person. */
+export const PriceDisplay = Schema.Struct({
+  amount_usd: UsdAmount,
+  unit: Schema.String,
+  cap_usd: Schema.optionalKey(UsdAmount),
+});
 
 export const PriceCharges = Schema.Struct({
   NO_RESULT: UsdAmount,
@@ -27,7 +57,11 @@ export const PriceCharges = Schema.Struct({
   INTERNAL: UsdAmount,
 });
 
-export const Price = Schema.Struct({ rule: PriceRule, charges: PriceCharges });
+export const Price = Schema.Struct({
+  rule: PriceRule,
+  display: PriceDisplay,
+  charges: PriceCharges,
+});
 
 export const RunStatus = Schema.Literals(["QUEUED", "RUNNING", "COMPLETED", "FAILED", "STOPPED"]);
 

@@ -1,6 +1,6 @@
 import { inspectEndpoint } from "../glasser/client.js";
 import { idempotencyKey } from "../glasser/idempotency.js";
-import { maxChargeMicros } from "../glasser/price.js";
+import { maxChargeMicros, unsupportedRule } from "../glasser/price.js";
 import { runFailure } from "../glasser/runFailure.js";
 import { dispatch } from "../glasser/runner.js";
 import { getHistory, getKey, serialized, unresolvedRequest } from "../ledger/store.js";
@@ -176,6 +176,11 @@ async function attemptTraffic(
     epoch,
   });
 
+  // Refused here, before any Run, because reserving a guessed ceiling is the
+  // under-reserve bug: the spend would overshoot the cap the user set.
+  const ceiling = maxChargeMicros(detail.value.price);
+  if (ceiling === null) return { ok: false, reason: unsupportedRule(detail.value.price) };
+
   let panel: TrafficPanel | null = null;
   let runUrl = "";
   let chargeUsd: string | null = null;
@@ -187,7 +192,7 @@ async function attemptTraffic(
       endpoint,
       input,
       domains: [domainOf(input)],
-      maxChargeMicros: maxChargeMicros(detail.value.price),
+      maxChargeMicros: ceiling,
       idemKey,
       endpointVersion: detail.value.endpoint_version,
     },
@@ -310,6 +315,9 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
     epoch,
   });
 
+  const ceiling = maxChargeMicros(detail.value.price);
+  if (ceiling === null) return { ok: false, reason: unsupportedRule(detail.value.price) };
+
   let fields: readonly LookupField[] = [];
   let keywords: readonly KeywordRow[] | undefined;
   let runUrl = "";
@@ -322,7 +330,7 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
       endpoint: lookup.endpoint,
       input,
       domains: [domain],
-      maxChargeMicros: maxChargeMicros(detail.value.price),
+      maxChargeMicros: ceiling,
       idemKey,
       endpointVersion: detail.value.endpoint_version,
     },
