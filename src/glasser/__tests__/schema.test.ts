@@ -142,6 +142,16 @@ describe("decodeEndpointDetail", () => {
     expect(maxChargeMicros(detail.price)).toBe(24_036n);
   });
 
+  it("rejects a known rule missing its fields, instead of passing it through the open member", () => {
+    const body = { ...LIVE[0], price: { ...LIVE[0].price, rule: { type: "flat" } } };
+    expect(() => decodeEndpointDetail(body)).toThrow();
+    const perResult = {
+      ...LIVE[0],
+      price: { ...LIVE[0].price, rule: { type: "per_result", cap_usd: "1.00" } },
+    };
+    expect(() => decodeEndpointDetail(perResult)).toThrow();
+  });
+
   it("decodes a rule shape this build has never seen, as the contract's open member requires", () => {
     const body = {
       ...LIVE[0],

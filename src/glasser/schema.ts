@@ -17,6 +17,24 @@ const UsdAmount = Schema.String;
  * `base_plus_per_result` arrived. The ceiling of such a rule is unknown, and
  * price.ts refuses to reserve against it rather than guessing.
  */
+const KNOWN_RULE_TYPES: ReadonlySet<string> = new Set([
+  "flat",
+  "per_result",
+  "per_token",
+  "base_plus_per_result",
+]);
+
+/** A known `type` must satisfy its own member above. Without this the open
+    member would also admit `{ type: "flat" }` missing its amount, and price.ts
+    would then read a field that is not there. */
+const UnknownRuleType = Schema.String.pipe(
+  Schema.check(
+    Schema.makeFilter((type: string) => !KNOWN_RULE_TYPES.has(type), {
+      title: "a rule type this build does not know",
+    }),
+  ),
+);
+
 export const PriceRule = Schema.Union([
   Schema.Struct({ type: Schema.Literal("flat"), amount_usd: UsdAmount }),
   Schema.Struct({
@@ -38,7 +56,7 @@ export const PriceRule = Schema.Union([
     cap_usd: UsdAmount,
     unit: Schema.optionalKey(Schema.String),
   }),
-  Schema.StructWithRest(Schema.Struct({ type: Schema.String }), [
+  Schema.StructWithRest(Schema.Struct({ type: UnknownRuleType }), [
     Schema.Record(Schema.String, Schema.Unknown),
   ]),
 ]);
