@@ -4,6 +4,126 @@
  */
 
 export interface paths {
+    "/v1/solutions/gtm/web_research": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Web research
+         * @description Search the web, news and places, read a page's content, or get an answer with sources. Actions search, news, places, scholar, shopping, images, videos and answer take query; scrape and similar take url. Providers: Serper, SerpApi, Exa, DataForSEO. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         */
+        post: operations["gtm-web-research"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/company_intelligence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Company intelligence
+         * @description From a domain, get the company profile and firmographics, technology stack, website traffic, similar companies, funding rounds or news. Providers: Apollo, People Data Labs, Hunter, Prospeo, PredictLeads, LeadMagic, BuiltWith, DataForSEO, Ahrefs, Apify, Exa, Serper. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         */
+        post: operations["gtm-company-intelligence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/people_search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Find prospects
+         * @description Find contacts by title, seniority, location or employer, enrich one person's profile, or find a work email. Providers: Apollo, People Data Labs, LeadMagic, ZoomInfo, Hunter, Prospeo. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         */
+        post: operations["gtm-people-search"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/seo_research": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keywords and SEO
+         * @description Keyword volume and difficulty, keyword ideas, Google results for a keyword, a domain's organic overview, ranking keywords and organic competitors, backlink totals and rows, referring domains, domain rating. Providers: Semrush, Serpstat, DataForSEO, Ahrefs, Serper. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         */
+        post: operations["gtm-seo-research"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/social_research": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Social media search
+         * @description Search posts, read a profile or channel, fetch one post, or find an account's other profiles on Reddit, X, YouTube, TikTok, Instagram and LinkedIn. Read-only. Takes platform and mode instead of action; every platform supports every mode. Providers: ScrapeCreators, Apify, TikHub, People Data Labs. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         */
+        post: operations["gtm-social-research"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/market_data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Market data
+         * @description US property values, rent estimates, property records, for-sale and rental listings, ZIP-code market statistics, and stock quotes. Providers: RentCast, SerpApi. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         */
+        post: operations["gtm-market-data"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/endpoints/search": {
         parameters: {
             query?: never;
@@ -53,7 +173,7 @@ export interface paths {
         };
         /**
          * List runs
-         * @description Lists runs in reverse order of creation time, with optional filters on status, provider, and endpoint. This endpoint uses cursor pagination. The list is scoped by the effective policy: runs of an endpoint this key cannot run are not readable either.
+         * @description Lists runs in reverse order of creation time, with optional filters on status, provider, endpoint, task and metadata. This endpoint uses cursor pagination. The list is scoped by the effective policy: runs of an endpoint this key cannot run are not readable either.
          */
         get: operations["runs-list"];
         put?: never;
@@ -164,6 +284,78 @@ export interface components {
             };
             request_id: string;
         };
+        IdempotencyKeyRequiredEncoded: {
+            error: {
+                /** @enum {string} */
+                code: "idempotency_key_required";
+                message: string;
+                reason?: string | null;
+                control?: string | null;
+                retry_after_ms?: (number | null) | null;
+                details?: Record<string, never> | null;
+            };
+            request_id: string;
+        };
+        IdempotencyConflictEncoded: {
+            error: {
+                /** @enum {string} */
+                code: "idempotency_conflict";
+                message: string;
+                reason?: string | null;
+                control?: string | null;
+                retry_after_ms?: (number | null) | null;
+                details?: Record<string, never> | null;
+            };
+            request_id: string;
+        };
+        EndpointNotPermittedEncoded: {
+            error: {
+                /** @enum {string} */
+                code: "endpoint_not_permitted";
+                message: string;
+                reason?: string | null;
+                control?: string | null;
+                retry_after_ms?: (number | null) | null;
+                details?: Record<string, never> | null;
+            };
+            request_id: string;
+        };
+        ForbiddenEncoded: {
+            error: {
+                /** @enum {string} */
+                code: "forbidden";
+                message: string;
+                reason?: string | null;
+                control?: string | null;
+                retry_after_ms?: (number | null) | null;
+                details?: Record<string, never> | null;
+            };
+            request_id: string;
+        };
+        InsufficientBalanceEncoded: {
+            error: {
+                /** @enum {string} */
+                code: "insufficient_balance";
+                message: string;
+                reason?: string | null;
+                control?: string | null;
+                retry_after_ms?: (number | null) | null;
+                details?: Record<string, never> | null;
+            };
+            request_id: string;
+        };
+        ServiceUnavailableEncoded: {
+            error: {
+                /** @enum {string} */
+                code: "service_unavailable";
+                message: string;
+                reason?: string | null;
+                control?: string | null;
+                retry_after_ms?: (number | null) | null;
+                details?: Record<string, never> | null;
+            };
+            request_id: string;
+        };
         RateLimitedEncoded: {
             error: {
                 /** @enum {string} */
@@ -212,66 +404,6 @@ export interface components {
             };
             request_id: string;
         };
-        IdempotencyKeyRequiredEncoded: {
-            error: {
-                /** @enum {string} */
-                code: "idempotency_key_required";
-                message: string;
-                reason?: string | null;
-                control?: string | null;
-                retry_after_ms?: (number | null) | null;
-                details?: Record<string, never> | null;
-            };
-            request_id: string;
-        };
-        IdempotencyConflictEncoded: {
-            error: {
-                /** @enum {string} */
-                code: "idempotency_conflict";
-                message: string;
-                reason?: string | null;
-                control?: string | null;
-                retry_after_ms?: (number | null) | null;
-                details?: Record<string, never> | null;
-            };
-            request_id: string;
-        };
-        EndpointNotPermittedEncoded: {
-            error: {
-                /** @enum {string} */
-                code: "endpoint_not_permitted";
-                message: string;
-                reason?: string | null;
-                control?: string | null;
-                retry_after_ms?: (number | null) | null;
-                details?: Record<string, never> | null;
-            };
-            request_id: string;
-        };
-        InsufficientBalanceEncoded: {
-            error: {
-                /** @enum {string} */
-                code: "insufficient_balance";
-                message: string;
-                reason?: string | null;
-                control?: string | null;
-                retry_after_ms?: (number | null) | null;
-                details?: Record<string, never> | null;
-            };
-            request_id: string;
-        };
-        ServiceUnavailableEncoded: {
-            error: {
-                /** @enum {string} */
-                code: "service_unavailable";
-                message: string;
-                reason?: string | null;
-                control?: string | null;
-                retry_after_ms?: (number | null) | null;
-                details?: Record<string, never> | null;
-            };
-            request_id: string;
-        };
         ConflictEncoded: {
             error: {
                 /** @enum {string} */
@@ -293,6 +425,1141 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "gtm-web-research": {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    action?: ("search" | "news" | "places" | "scholar" | "shopping" | "images" | "videos" | "answer" | "scrape" | "similar") | null;
+                    provider?: ("auto" | "serper" | "serpapi" | "exa" | "dataforseo") | null;
+                    query?: string | null;
+                    url?: string | null;
+                    country?: string | null;
+                    language?: string | null;
+                    limit?: number | null;
+                    task_id?: string | null;
+                    metadata?: ({
+                        [key: string]: string;
+                    } | unknown) | null;
+                };
+            };
+        };
+        responses: {
+            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description an in-flight run: QUEUED or RUNNING */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description ValidationFailed | IdempotencyKeyRequired */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["IdempotencyKeyRequiredEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description InsufficientBalance */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsufficientBalanceEncoded"];
+                };
+            };
+            /** @description EndpointNotPermitted | Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointNotPermittedEncoded"] | components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description IdempotencyConflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+            /** @description ServiceUnavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceUnavailableEncoded"];
+                };
+            };
+        };
+    };
+    "gtm-company-intelligence": {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    action?: ("enrich" | "tech_stack" | "traffic" | "competitors" | "funding" | "news") | null;
+                    provider?: ("auto" | "apollo" | "pdl" | "hunter" | "prospeo" | "predictleads" | "leadmagic" | "builtwith" | "dataforseo" | "ahrefs" | "apify" | "exa" | "serper") | null;
+                    /** @description A website domain such as stripe.com. A full URL is accepted and reduced to its host. */
+                    domain: string;
+                    country?: string | null;
+                    query?: string | null;
+                    limit?: number | null;
+                    task_id?: string | null;
+                    metadata?: ({
+                        [key: string]: string;
+                    } | unknown) | null;
+                };
+            };
+        };
+        responses: {
+            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description an in-flight run: QUEUED or RUNNING */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description ValidationFailed | IdempotencyKeyRequired */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["IdempotencyKeyRequiredEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description InsufficientBalance */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsufficientBalanceEncoded"];
+                };
+            };
+            /** @description EndpointNotPermitted | Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointNotPermittedEncoded"] | components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description IdempotencyConflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+            /** @description ServiceUnavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceUnavailableEncoded"];
+                };
+            };
+        };
+    };
+    "gtm-people-search": {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    action?: ("search" | "enrich" | "find_email") | null;
+                    provider?: ("auto" | "apollo" | "pdl" | "leadmagic" | "zoominfo" | "hunter" | "prospeo") | null;
+                    job_titles?: string[] | null;
+                    seniorities?: ("owner" | "founder" | "c_suite" | "partner" | "vp" | "head" | "director" | "manager" | "senior" | "entry" | "intern")[] | null;
+                    locations?: string[] | null;
+                    company_domain?: string | null;
+                    keywords?: string | null;
+                    full_name?: string | null;
+                    email?: string | null;
+                    linkedin_url?: string | null;
+                    limit?: number | null;
+                    task_id?: string | null;
+                    metadata?: ({
+                        [key: string]: string;
+                    } | unknown) | null;
+                };
+            };
+        };
+        responses: {
+            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description an in-flight run: QUEUED or RUNNING */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description ValidationFailed | IdempotencyKeyRequired */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["IdempotencyKeyRequiredEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description InsufficientBalance */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsufficientBalanceEncoded"];
+                };
+            };
+            /** @description EndpointNotPermitted | Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointNotPermittedEncoded"] | components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description IdempotencyConflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+            /** @description ServiceUnavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceUnavailableEncoded"];
+                };
+            };
+        };
+    };
+    "gtm-seo-research": {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    action?: ("keyword_overview" | "keyword_ideas" | "serp" | "domain_overview" | "ranked_keywords" | "organic_competitors" | "backlinks_overview" | "backlinks" | "referring_domains" | "domain_rating") | null;
+                    provider?: ("auto" | "semrush" | "serpstat" | "dataforseo" | "ahrefs" | "serper") | null;
+                    keywords?: string[] | null;
+                    domain?: string | null;
+                    country?: string | null;
+                    limit?: number | null;
+                    task_id?: string | null;
+                    metadata?: ({
+                        [key: string]: string;
+                    } | unknown) | null;
+                };
+            };
+        };
+        responses: {
+            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description an in-flight run: QUEUED or RUNNING */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description ValidationFailed | IdempotencyKeyRequired */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["IdempotencyKeyRequiredEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description InsufficientBalance */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsufficientBalanceEncoded"];
+                };
+            };
+            /** @description EndpointNotPermitted | Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointNotPermittedEncoded"] | components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description IdempotencyConflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+            /** @description ServiceUnavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceUnavailableEncoded"];
+                };
+            };
+        };
+    };
+    "gtm-social-research": {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    platform: "reddit" | "x" | "youtube" | "tiktok" | "instagram" | "linkedin";
+                    mode?: ("search" | "profile" | "feed" | "post" | "find") | null;
+                    provider?: ("auto" | "scrapecreators" | "apify" | "tikhub" | "pdl") | null;
+                    query?: string | null;
+                    handle?: string | null;
+                    url?: string | null;
+                    metadata?: ({
+                        [key: string]: string;
+                    } | unknown) | null;
+                };
+            };
+        };
+        responses: {
+            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description an in-flight run: QUEUED or RUNNING */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description ValidationFailed | IdempotencyKeyRequired */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["IdempotencyKeyRequiredEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description InsufficientBalance */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsufficientBalanceEncoded"];
+                };
+            };
+            /** @description EndpointNotPermitted | Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointNotPermittedEncoded"] | components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description IdempotencyConflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+            /** @description ServiceUnavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceUnavailableEncoded"];
+                };
+            };
+        };
+    };
+    "gtm-market-data": {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description property_value and property_rent take address. property_search, listings_sale and listings_rental take address, or city plus state, or zip. market_stats takes zip. stock_quote takes symbol.
+                     * @enum {string}
+                     */
+                    action: "property_value" | "property_rent" | "property_search" | "listings_sale" | "listings_rental" | "market_stats" | "stock_quote";
+                    provider?: ("auto" | "rentcast" | "serpapi") | null;
+                    address?: string | null;
+                    city?: string | null;
+                    state?: string | null;
+                    zip?: string | null;
+                    symbol?: string | null;
+                    limit?: number | null;
+                    task_id?: string | null;
+                    metadata?: ({
+                        [key: string]: string;
+                    } | unknown) | null;
+                };
+            };
+        };
+        responses: {
+            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description an in-flight run: QUEUED or RUNNING */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        run_url: string;
+                        provider: string;
+                        endpoint: string;
+                        endpoint_version: number;
+                        /** @enum {string} */
+                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        failure: {
+                            /** @enum {string} */
+                            kind: "TIMED_OUT" | "INTERNAL";
+                            message: string;
+                        } | null;
+                        input: Record<string, never>;
+                        output: unknown;
+                        provider_response: {
+                            http_status: number;
+                            error?: unknown | null;
+                        } | null;
+                        charge_usd: string | null;
+                        charge_basis: {
+                            /** @enum {string} */
+                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                            quantity: number | null;
+                        } | null;
+                        stoppable: boolean;
+                        stop_requested_at: string | null;
+                        /**
+                         * Format: date-time
+                         * @description ISO-8601 UTC timestamp
+                         */
+                        created_at: string;
+                        started_at: string | null;
+                        completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description ValidationFailed | IdempotencyKeyRequired */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["IdempotencyKeyRequiredEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description InsufficientBalance */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsufficientBalanceEncoded"];
+                };
+            };
+            /** @description EndpointNotPermitted | Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointNotPermittedEncoded"] | components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description IdempotencyConflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+            /** @description ServiceUnavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceUnavailableEncoded"];
+                };
+            };
+        };
+    };
     "endpoints-search": {
         parameters: {
             query?: never;
@@ -306,6 +1573,12 @@ export interface operations {
                     query?: string | null;
                     limit?: number | null;
                     cursor?: string | null;
+                    task_id?: string | null;
+                    metadata?: ({
+                        [key: string]: string;
+                    } | unknown) | null;
+                    /** @description Required on every search. The use case behind this search: what the user asked for, in their own words, with the subject in it — the company, domain, ticker, place or topic. Shorten a long request rather than rewriting it. */
+                    use_case: string;
                 };
             };
         };
@@ -341,6 +1614,35 @@ export interface operations {
                                     cap_usd: string;
                                     /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
                                     partial_usd?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "per_token";
+                                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                    per_million_input_tokens_usd: string;
+                                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                    cap_usd: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "base_plus_per_result";
+                                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                    base_usd: string;
+                                    included_results: number;
+                                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                    per_extra_result_usd: string;
+                                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                    cap_usd: string;
+                                    unit?: string;
+                                } | ({
+                                    type: string;
+                                } & {
+                                    [key: string]: unknown;
+                                });
+                                display: {
+                                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                    amount_usd: string;
+                                    unit: string;
+                                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                    cap_usd?: string;
                                 };
                                 charges: {
                                     /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
@@ -359,9 +1661,18 @@ export interface operations {
                             /** @description Cosine similarity between the query and this endpoint's searchable text, in [-1, 1]; null when semantic scoring did not run. A similarity signal for comparing rows, not a verdict: ranking fuses two arms, and neither a low score nor the end of the results shows that a capability is absent. */
                             score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         }[];
+                        client?: {
+                            client_version: string | null;
+                            minimum_version: string;
+                            latest_version: string;
+                            upgrade_command: string;
+                            reason: string;
+                        };
                         next_cursor: string | null;
                         /** @description Total number of ranked candidates across all pages. */
                         total: number;
+                        /** @description The task this search was recorded against — the one you sent, or a newly minted one if you sent none. Pass it back on every later search, inspect and run for the same piece of work. */
+                        task_id: string;
                     };
                 };
             };
@@ -381,6 +1692,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description RateLimited */
@@ -407,6 +1727,10 @@ export interface operations {
                     provider: string;
                     endpoint: string;
                     endpoint_version?: number | null;
+                    task_id?: string | null;
+                    metadata?: ({
+                        [key: string]: string;
+                    } | unknown) | null;
                 };
             };
         };
@@ -441,6 +1765,35 @@ export interface operations {
                                 cap_usd: string;
                                 /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
                                 partial_usd?: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "per_token";
+                                /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                per_million_input_tokens_usd: string;
+                                /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                cap_usd: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "base_plus_per_result";
+                                /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                base_usd: string;
+                                included_results: number;
+                                /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                per_extra_result_usd: string;
+                                /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                cap_usd: string;
+                                unit?: string;
+                            } | ({
+                                type: string;
+                            } & {
+                                [key: string]: unknown;
+                            });
+                            display: {
+                                /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                amount_usd: string;
+                                unit: string;
+                                /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                cap_usd?: string;
                             };
                             charges: {
                                 /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
@@ -456,6 +1809,13 @@ export interface operations {
                         /** @enum {string} */
                         run_mode: "sync" | "async";
                         timeout_ms?: number | null;
+                        client?: {
+                            client_version: string | null;
+                            minimum_version: string;
+                            latest_version: string;
+                            upgrade_command: string;
+                            reason: string;
+                        };
                         /** @enum {string} */
                         method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD";
                         input_schema: Record<string, never>;
@@ -482,6 +1842,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description NotFound */
@@ -521,6 +1890,8 @@ export interface operations {
                 status?: ("QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED") | null;
                 provider?: string | null;
                 endpoint?: string | null;
+                task?: string | null;
+                metadata?: string | null;
             };
             header?: never;
             path?: never;
@@ -569,8 +1940,20 @@ export interface operations {
                             created_at: string;
                             started_at: string | null;
                             completed_at: string | null;
+                            task_id: string | null;
+                            /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                            metadata: {
+                                [key: string]: string;
+                            };
                         }[];
                         next_cursor: string | null;
+                        client?: {
+                            client_version: string | null;
+                            minimum_version: string;
+                            latest_version: string;
+                            upgrade_command: string;
+                            reason: string;
+                        };
                     };
                 };
             };
@@ -590,6 +1973,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description RateLimited */
@@ -619,6 +2011,10 @@ export interface operations {
                     endpoint: string;
                     input?: Record<string, never>;
                     endpoint_version?: number | null;
+                    task_id?: string | null;
+                    metadata?: ({
+                        [key: string]: string;
+                    } | unknown) | null;
                 };
             };
         };
@@ -663,6 +2059,11 @@ export interface operations {
                         created_at: string;
                         started_at: string | null;
                         completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
                     };
                 };
             };
@@ -706,6 +2107,11 @@ export interface operations {
                         created_at: string;
                         started_at: string | null;
                         completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
                     };
                 };
             };
@@ -736,13 +2142,13 @@ export interface operations {
                     "application/json": components["schemas"]["InsufficientBalanceEncoded"];
                 };
             };
-            /** @description EndpointNotPermitted */
+            /** @description EndpointNotPermitted | Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EndpointNotPermittedEncoded"];
+                    "application/json": components["schemas"]["EndpointNotPermittedEncoded"] | components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description NotFound */
@@ -834,6 +2240,11 @@ export interface operations {
                         created_at: string;
                         started_at: string | null;
                         completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
                     };
                 };
             };
@@ -853,6 +2264,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description NotFound */
@@ -926,6 +2346,11 @@ export interface operations {
                         created_at: string;
                         started_at: string | null;
                         completed_at: string | null;
+                        task_id: string | null;
+                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        metadata: {
+                            [key: string]: string;
+                        };
                     };
                 };
             };
@@ -945,6 +2370,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description NotFound */
@@ -998,6 +2432,13 @@ export interface operations {
                         held_usd: string;
                         /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
                         available_usd: string;
+                        client?: {
+                            client_version: string | null;
+                            minimum_version: string;
+                            latest_version: string;
+                            upgrade_command: string;
+                            reason: string;
+                        };
                     };
                 };
             };
@@ -1017,6 +2458,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description RateLimited */
@@ -1066,6 +2516,13 @@ export interface operations {
                             created_at: string;
                         }[];
                         next_cursor: string | null;
+                        client?: {
+                            client_version: string | null;
+                            minimum_version: string;
+                            latest_version: string;
+                            upgrade_command: string;
+                            reason: string;
+                        };
                     };
                 };
             };
@@ -1085,6 +2542,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description RateLimited */
