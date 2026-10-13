@@ -91,3 +91,95 @@ it("asks Semrush about the registrable domain, twelve rows at most", () => {
     display_limit: 12,
   });
 });
+
+it("lists every technology category and the page facts beside them", () => {
+  // surething.io, run 1dba1705.
+  const output = {
+    tasks: [
+      {
+        result: [
+          {
+            title: "SureThing — World's First General AI Agency",
+            description: "Your AI COO, CMO & Researcher in one team.",
+            last_visited: "2026-10-11 08:26:53 +00:00",
+            content_language_code: "en",
+            social_graph_urls: ["https://twitter.com/getsurething"],
+            emails: null,
+            technologies: {
+              other: { miscellaneous: ["HTTP/3"] },
+              servers: { cdn: ["Cloudflare"] },
+              analytics: { analytics: ["Cloudflare Browser Insights"] },
+              marketing: { rum: ["Cloudflare Browser Insights"] },
+            },
+          },
+        ],
+      },
+    ],
+  };
+  const fields = lookup("technologies").extract(output);
+  expect(fields).toEqual([
+    { label: "Other", value: "HTTP/3" },
+    { label: "CDN", value: "Cloudflare" },
+    { label: "Analytics", value: "Cloudflare Browser Insights" },
+    // The same tool under a second category is a second fact, not a duplicate.
+    { label: "Real user monitoring", value: "Cloudflare Browser Insights" },
+    { label: "Page title", value: "SureThing — World's First General AI Agency" },
+    { label: "Meta description", value: "Your AI COO, CMO & Researcher in one team." },
+    { label: "Social links", value: "https://twitter.com/getsurething" },
+    { label: "Language", value: "en" },
+    { label: "Last scanned", value: "2026-10-11" },
+  ]);
+  expect(lookup("technologies").layout).toBe("facts");
+});
+
+it("reads every field Hunter fills for the company", () => {
+  // surething.io, run d34e4a0a.
+  const output = {
+    data: {
+      name: "SureThing",
+      legalName: "SureThing",
+      domain: "surething.io",
+      description: "An autonomous AI agent.",
+      location: "94114, San Francisco, California, United States",
+      timeZone: "America/Los_Angeles",
+      foundedYear: null,
+      companyType: "privately held",
+      phone: "+1 650 398 6384",
+      site: { phoneNumbers: ["+1 650 398 6384"], emailAddresses: ["support@surething.io"] },
+      category: { sector: "Information Technology", industry: "Internet Software & Services" },
+      metrics: { employees: "1-10", employeesCount: 6, raised: null, trafficRank: "very_low" },
+      tags: null,
+      tech: ["cloudflare", "google-cloud-cdn", "youtube"],
+      emailProvider: "google.com",
+      parent: { domain: null },
+      linkedin: { handle: "company/surethingio" },
+      twitter: { handle: null },
+      facebook: { handle: "getsurething" },
+    },
+  };
+  expect(lookup("company").extract(output)).toEqual([
+    { label: "Name", value: "SureThing" },
+    { label: "About", value: "An autonomous AI agent." },
+    { label: "Industry", value: "Internet Software & Services" },
+    { label: "Sector", value: "Information Technology" },
+    { label: "Location", value: "94114, San Francisco, California, United States" },
+    { label: "Time zone", value: "America/Los_Angeles" },
+    { label: "Employees", value: "6 (1-10)" },
+    { label: "Type", value: "privately held" },
+    // Hunter repeats the main number in the site list; it is shown once.
+    { label: "Phone", value: "+1 650 398 6384" },
+    { label: "Email", value: "support@surething.io" },
+    { label: "Email provider", value: "google.com" },
+    { label: "Website", value: "https://surething.io" },
+    { label: "LinkedIn", value: "https://www.linkedin.com/company/surethingio" },
+    { label: "Facebook", value: "https://www.facebook.com/getsurething" },
+    { label: "Technologies", value: "cloudflare, google-cloud-cdn, youtube" },
+    { label: "Traffic level", value: "very low" },
+  ]);
+  expect(lookup("company").buildInput("docs.example.com")).toEqual({ domain: "example.com" });
+});
+
+it("needs a company name to count as a result", () => {
+  expect(lookup("company").extract({ data: { location: "Kyiv" } })).toEqual([]);
+  expect(lookup("company").extract({ data: null })).toEqual([]);
+});

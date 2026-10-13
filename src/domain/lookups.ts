@@ -16,6 +16,8 @@ export const REPORT_TITLE = {
   "ranked-keywords": "Ranking keywords",
   "traffic-history": "Search traffic, 12 months",
   "ai-citations": "AI search citations",
+  company: "Company",
+  technologies: "Technologies",
 } as const;
 
 export type LookupId =
@@ -24,7 +26,9 @@ export type LookupId =
   | "ranked-keywords"
   | "backlinks"
   | "traffic-history"
-  | "ai-citations";
+  | "ai-citations"
+  | "company"
+  | "technologies";
 
 /** One point of a month-by-month series. Shares the traffic chart's shape so
     the same line component draws both. */
@@ -60,6 +64,13 @@ export type Lookup = {
   readonly extractKeywords?: (output: unknown) => readonly KeywordRow[];
   /** A month-by-month series drawn under the figures, oldest first. */
   readonly extractSeries?: (output: unknown) => readonly SeriesPoint[];
+  /**
+   * How the card lays the fields out. "figures" is the default: each field a
+   * lead number with a caption. "facts" is a label and value list for text
+   * answers such as a company's address or a list of technologies, which read
+   * as faults at figure size.
+   */
+  readonly layout?: "figures" | "facts";
   readonly extract: (output: unknown) => readonly LookupField[];
 };
 
@@ -237,6 +248,165 @@ export const LOOKUPS: readonly Lookup[] = [
       return fields;
     },
   },
+  {
+    id: "company",
+    title: "Company",
+    blurb: "Who is behind the domain, as Hunter records it.",
+    provider: "hunter",
+    endpoint: "/v2/companies/find",
+    attribution: { label: "Data by Hunter", href: "https://hunter.io/" },
+    layout: "facts",
+    buildInput: (domain) => ({ domain: registrableDomain(domain) }),
+    /**
+     * Measured 2026-10-13 (dataforseo.com, surething.io): {data:{name,
+     * legalName, description, location, foundedYear, companyType, phone,
+     * site:{phoneNumbers, emailAddresses}, category:{sector, industry},
+     * metrics:{employees, employeesCount, raised, annualRevenue,
+     * estimatedAnnualRevenue, trafficRank}, tags, tech, emailProvider,
+     * timeZone, parent:{domain}, linkedin/twitter/facebook/instagram/youtube/
+     * crunchbase:{handle}}}.
+     *
+     * Every field Hunter fills is shown. The first version picked nine and
+     * dropped the rest — phone, email, industry, Facebook, Hunter's own
+     * technology list — so the card looked thinner than the record was.
+     * Links are written as full https URLs so the card can open them.
+     */
+    extract: (output) => {
+      const data = (output as { data?: Record<string, unknown> } | null)?.data;
+      if (!data || typeof data["name"] !== "string") return [];
+      const metrics = (data["metrics"] ?? {}) as Record<string, unknown>;
+      const category = (data["category"] ?? {}) as Record<string, unknown>;
+      const site = (data["site"] ?? {}) as Record<string, unknown>;
+      const handle = (key: string): string | null => {
+        const value = (data[key] as Record<string, unknown> | undefined)?.["handle"];
+        return typeof value === "string" && value !== "" ? value : null;
+      };
+      const list = (value: unknown): string =>
+        Array.isArray(value)
+          ? value
+              .filter((item): item is string => typeof item === "string" && item !== "")
+              .join(", ") || "—"
+          : "—";
+      const employees =
+        typeof metrics["employeesCount"] === "number"
+          ? `${metrics["employeesCount"]}${typeof metrics["employees"] === "string" ? ` (${metrics["employees"]})` : ""}`
+          : text(metrics["employees"]);
+      const phones = [
+        ...new Set(
+          [
+            data["phone"],
+            ...(Array.isArray(site["phoneNumbers"]) ? site["phoneNumbers"] : []),
+          ].filter((item): item is string => typeof item === "string" && item !== ""),
+        ),
+      ];
+      const social = (key: string, base: string) => {
+        const value = handle(key);
+        return value ? `${base}${value}` : "—";
+      };
+      const legal = text(data["legalName"]);
+      const parent = (data["parent"] as Record<string, unknown> | undefined)?.["domain"];
+      const revenue = text(metrics["estimatedAnnualRevenue"] ?? metrics["annualRevenue"]);
+      const raised = typeof metrics["raised"] === "number" ? `$${compact(metrics["raised"])}` : "—";
+      const trafficRank =
+        typeof metrics["trafficRank"] === "string"
+          ? metrics["trafficRank"].replace(/_/g, " ")
+          : "—";
+      return [
+        { label: "Name", value: data["name"] as string },
+        { label: "Legal name", value: legal === data["name"] ? "—" : legal },
+        { label: "About", value: text(data["description"]) },
+        { label: "Industry", value: text(category["industry"] ?? category["sector"]) },
+        { label: "Sector", value: category["industry"] ? text(category["sector"]) : "—" },
+        { label: "Location", value: text(data["location"]) },
+        { label: "Time zone", value: text(data["timeZone"]) },
+        { label: "Founded", value: text(data["foundedYear"]) },
+        { label: "Employees", value: employees },
+        { label: "Type", value: text(data["companyType"]) },
+        { label: "Revenue", value: revenue },
+        { label: "Raised", value: raised },
+        { label: "Parent company", value: text(parent) },
+        { label: "Ticker", value: text(data["ticker"]) },
+        { label: "Phone", value: phones.length ? phones.join(", ") : "—" },
+        { label: "Email", value: list(site["emailAddresses"]) },
+        { label: "Email provider", value: text(data["emailProvider"]) },
+        { label: "Website", value: `https://${text(data["domain"])}` },
+        { label: "LinkedIn", value: social("linkedin", "https://www.linkedin.com/") },
+        { label: "X", value: social("twitter", "https://x.com/") },
+        { label: "Facebook", value: social("facebook", "https://www.facebook.com/") },
+        { label: "Instagram", value: social("instagram", "https://www.instagram.com/") },
+        { label: "YouTube", value: social("youtube", "https://www.youtube.com/") },
+        { label: "Crunchbase", value: social("crunchbase", "https://www.crunchbase.com/") },
+        { label: "Tags", value: list(data["tags"]) },
+        { label: "Technologies", value: list(data["tech"]) },
+        { label: "Traffic level", value: trafficRank },
+      ].filter((field) => field.value !== "—" && field.value !== "https://—");
+    },
+  },
+  {
+    id: "technologies",
+    title: "Technologies",
+    blurb: "What the site is built and served with, as DataForSEO last saw it.",
+    provider: "dataforseo",
+    endpoint: "/v3/domain_analytics/technologies/domain_technologies/live",
+    attribution: { label: "Data by DataForSEO", href: "https://dataforseo.com/" },
+    layout: "facts",
+    buildInput: (domain) => ({ target: domain }),
+    /**
+     * Measured 2026-10-13: tasks[].result[] carries technologies as a
+     * two-level map, group → category → [names] ({servers:{cdn:["Cloudflare"]},
+     * marketing:{rum:[…]}, …}), beside title, description, emails,
+     * phone_numbers, social_graph_urls, country_iso_code, language_code and
+     * last_visited.
+     *
+     * Every category is listed, even when a name recurs under two of them: a
+     * tool counted as both analytics and real-user monitoring is two facts.
+     * The first version kept each name once and so dropped categories, and it
+     * left out everything but the technologies.
+     */
+    extract: (output) => {
+      for (const item of walk(output)) {
+        const groups = item["technologies"];
+        if (groups === null || typeof groups !== "object" || Array.isArray(groups)) continue;
+        const byCategory = new Map<string, Set<string>>();
+        for (const group of Object.values(groups as Record<string, unknown>)) {
+          if (group === null || typeof group !== "object") continue;
+          for (const [category, names] of Object.entries(group as Record<string, unknown>)) {
+            if (!Array.isArray(names)) continue;
+            const bucket = byCategory.get(category) ?? new Set<string>();
+            for (const name of names) if (typeof name === "string") bucket.add(name);
+            if (bucket.size) byCategory.set(category, bucket);
+          }
+        }
+        if (byCategory.size === 0) return [];
+        const list = (value: unknown): string =>
+          Array.isArray(value)
+            ? value
+                .filter((entry): entry is string => typeof entry === "string" && entry !== "")
+                .join(", ") || "—"
+            : "—";
+        const scanned =
+          typeof item["last_visited"] === "string" ? item["last_visited"].slice(0, 10) : "—";
+        return [
+          ...[...byCategory].map(([category, names]) => ({
+            label: categoryName(category),
+            value: [...names].join(", "),
+          })),
+          { label: "Page title", value: text(item["title"]) },
+          { label: "Meta description", value: text(item["description"]) },
+          { label: "Social links", value: list(item["social_graph_urls"]) },
+          { label: "Email", value: list(item["emails"]) },
+          { label: "Phone", value: list(item["phone_numbers"]) },
+          { label: "Country", value: text(item["country_iso_code"]) },
+          {
+            label: "Language",
+            value: text(item["content_language_code"] ?? item["language_code"]),
+          },
+          { label: "Last scanned", value: scanned },
+        ].filter((field) => field.value !== "—");
+      }
+      return [];
+    },
+  },
 ];
 
 /** The platforms Ahrefs reports, in the order the card lists them. */
@@ -280,11 +450,32 @@ function semrushMonths(output: unknown): readonly SemrushMonth[] {
   return months;
 }
 
+/** "javascript_libraries" becomes "JavaScript libraries"; "cms" stays an
+    acronym. */
+function categoryName(key: string): string {
+  const ACRONYMS: Record<string, string> = {
+    cms: "CMS",
+    cdn: "CDN",
+    javascript_libraries: "JavaScript libraries",
+    seo: "SEO",
+    miscellaneous: "Other",
+    rum: "Real user monitoring",
+  };
+  if (ACRONYMS[key]) return ACRONYMS[key];
+  const words = key.replace(/_+/g, " ").trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 function number(value: unknown): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value !== "string" || value.trim() === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function text(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return typeof value === "string" && value.trim() !== "" ? value : "—";
 }
 
 /** A Provider's result is buried in tasks[].result[].items[], at a depth that

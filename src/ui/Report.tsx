@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { ageOf, isOutdated } from "../domain/cache.js";
 import {
   type KeywordRow,
@@ -49,6 +49,7 @@ const SECTIONS: Record<Tab, { readonly title: string; readonly ids: readonly Rep
   // they are bought only when someone opens this section.
   ai: { title: "AI search", ids: ["ai-citations"] },
   backlinks: { title: "Backlinks", ids: ["domain-rating", "backlinks"] },
+  site: { title: "Site", ids: ["company", "technologies"] },
 };
 
 const TITLE = REPORT_TITLE;
@@ -249,6 +250,8 @@ const TAB_OF: Record<ReportId, Tab> = {
   "ranked-keywords": "search",
   "traffic-history": "search",
   "ai-citations": "ai",
+  company: "site",
+  technologies: "site",
 };
 
 /** One summary row: name, number, age. If it was never bought, say so rather
@@ -642,6 +645,9 @@ function Panel({
           />
         ) : id === "ai-citations" ? (
           <AiCitations fields={payload.fields} />
+        ) : layoutOf(id) === "facts" ? (
+          // Results saved before the count row was dropped still carry it.
+          <FactList fields={payload.fields.filter((field) => field.label !== "Technologies")} />
         ) : (
           <>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-4">
@@ -779,6 +785,76 @@ function Panel({
         </div>
       )}
     </section>
+  );
+}
+
+const layoutOf = (id: ReportId): "figures" | "facts" =>
+  LOOKUPS.find((lookup) => lookup.id === (id as LookupId))?.layout ?? "figures";
+
+/**
+ * Label and value rows for text answers. A company's address or a list of
+ * eleven JavaScript libraries set at figure size reads as a fault, and the
+ * figure grid wraps them into a ragged wall.
+ */
+/** Exported for its link rules' test only. */
+export const FactListForTest = (props: { readonly fields: readonly LookupField[] }) =>
+  FactList(props);
+
+function FactList({ fields }: { readonly fields: readonly LookupField[] }) {
+  return (
+    <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+      {fields.map((field) => (
+        <Fragment key={field.label}>
+          <dt className="text-small text-muted-foreground">{field.label}</dt>
+          <dd className="m-0 min-w-0 break-words">
+            <Linked value={field.value} />
+          </dd>
+        </Fragment>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * A comma-separated value whose parts may be links. Only three kinds become
+ * anchors — https URLs, email addresses and phone numbers — because the text
+ * comes from a Provider: anything else, a javascript: URL included, stays text.
+ * A phone number must start with "+": dates and ranges such as "34 (11-50)"
+ * are digits and dashes too.
+ * Displayed without the scheme, so the card reads as it did before.
+ */
+function Linked({ value }: { readonly value: string }) {
+  const parts = value.split(", ");
+  return (
+    <>
+      {parts.map((part, index) => {
+        const href = /^https?:\/\/[^\s]+$/i.test(part)
+          ? part.replace(/^http:/i, "https:")
+          : /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(part)
+            ? `mailto:${part}`
+            : /^\+[\d\s().-]{7,}$/.test(part)
+              ? `tel:${part.replace(/[^\d+]/g, "")}`
+              : null;
+        const label = part.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
+        return (
+          <Fragment key={`${index}-${part}`}>
+            {index > 0 && ", "}
+            {href ? (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-accent"
+              >
+                {label}
+              </a>
+            ) : (
+              part
+            )}
+          </Fragment>
+        );
+      })}
+    </>
   );
 }
 
