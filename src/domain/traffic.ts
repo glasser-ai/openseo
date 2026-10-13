@@ -192,9 +192,18 @@ export function extractTraffic(output: unknown): TrafficPanel | null {
     .sort((a, b) => b.share - a.share);
 
   const rawMonthly = (row["estimatedMonthlyVisits"] ?? {}) as Record<string, unknown>;
+  /*
+   * A month at zero is a measurement, not a gap. A new site reads 0, 0, 274,
+   * and that rise is the whole story; dropping the zeros left a single dot with
+   * nothing to compare it to. Only values that are not numbers are dropped. A
+   * domain Similarweb does not track at all is still caught below, where
+   * `tracked` needs visits above zero.
+   */
   const monthly = Object.entries(rawMonthly)
-    .map(([date, value]) => ({ date, visits: num(value) ?? 0 }))
-    .filter((point) => point.visits > 0)
+    .flatMap(([date, value]) => {
+      const visits = num(value);
+      return visits === null || visits < 0 ? [] : [{ date, visits }];
+    })
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // The latest complete month is this section's basis, so it labels the period.
