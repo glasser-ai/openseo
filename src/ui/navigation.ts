@@ -1,9 +1,10 @@
-export const TABS = ["overview", "traffic", "search", "backlinks"] as const;
+export const TABS = ["overview", "traffic", "search", "ai", "backlinks"] as const;
 export type Tab = (typeof TABS)[number];
 export const TAB_LABEL: Record<Tab, string> = {
   overview: "Overview",
   traffic: "Traffic",
   search: "Search",
+  ai: "AI search",
   backlinks: "Backlinks",
 };
 export type SettingsSection = "connection" | "activity";

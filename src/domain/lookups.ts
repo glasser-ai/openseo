@@ -15,6 +15,7 @@ export const REPORT_TITLE = {
   "organic-traffic": "Organic search",
   "ranked-keywords": "Ranking keywords",
   "traffic-history": "Search traffic, 12 months",
+  "ai-citations": "AI search citations",
 } as const;
 
 export type LookupId =
@@ -22,7 +23,8 @@ export type LookupId =
   | "organic-traffic"
   | "ranked-keywords"
   | "backlinks"
-  | "traffic-history";
+  | "traffic-history"
+  | "ai-citations";
 
 /** One point of a month-by-month series. Shares the traffic chart's shape so
     the same line component draws both. */
@@ -199,6 +201,53 @@ export const LOOKUPS: readonly Lookup[] = [
         .map((month) => ({ date: month.date, visits: month.organic }))
         .reverse(),
   },
+  {
+    id: "ai-citations",
+    title: "AI search citations",
+    blurb:
+      "How many AI answers cite this domain, and from how many of its pages, in the Ahrefs index — per platform. Zero is an answer: the index holds the platform and found nothing.",
+    provider: "ahrefs",
+    endpoint: "/v3/site-explorer/ai-responses-count",
+    attribution: { label: "Data by Ahrefs", href: "https://ahrefs.com/" },
+    // subdomains: the whole site, the way the DR lookup reads it.
+    buildInput: (domain) => ({ target: domain, mode: "subdomains" }),
+    /**
+     * Measured 2026-10-13: {ai_responses_count:{all_platforms:{pages,citations},
+     * chatgpt:{…}, perplexity:{…}, gemini:{…}, google_ai_overviews:{…},
+     * google_ai_mode:{…}, copilot:{…}, grok:{…}}}.
+     */
+    extract: (output) => {
+      const counts = (output as { ai_responses_count?: Record<string, unknown> } | null)
+        ?.ai_responses_count;
+      if (!counts) return [];
+      const all = counts["all_platforms"] as Record<string, unknown> | undefined;
+      if (typeof all?.["citations"] !== "number") return [];
+      const fields: LookupField[] = [
+        { label: "AI citations", value: compact(all["citations"]) },
+        { label: "Pages cited", value: compact(all["pages"]) },
+      ];
+      // Every platform, zeros included, with both of its numbers: a zero is an
+      // answer, and pages cited is half of what the Provider reports.
+      for (const [key, label] of AI_PLATFORMS) {
+        const platform = counts[key] as Record<string, unknown> | undefined;
+        if (typeof platform?.["citations"] !== "number") continue;
+        fields.push({ label, value: compact(platform["citations"]) });
+        fields.push({ label: `${label} pages`, value: compact(platform["pages"]) });
+      }
+      return fields;
+    },
+  },
+];
+
+/** The platforms Ahrefs reports, in the order the card lists them. */
+const AI_PLATFORMS: readonly (readonly [string, string])[] = [
+  ["chatgpt", "ChatGPT"],
+  ["perplexity", "Perplexity"],
+  ["google_ai_overviews", "Google AI Overviews"],
+  ["google_ai_mode", "Google AI Mode"],
+  ["gemini", "Gemini"],
+  ["copilot", "Copilot"],
+  ["grok", "Grok"],
 ];
 
 type SemrushMonth = {

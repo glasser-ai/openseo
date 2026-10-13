@@ -11,6 +11,7 @@ import {
 import { type Metric, type Tone, toneOf } from "../domain/thresholds.js";
 import { compact, parseCompact } from "../domain/traffic.js";
 import { formatUsd, usdToMicros } from "../ledger/micros.js";
+import { AiCitations } from "./AiCitations.jsx";
 import { Meter, MonthlyLine } from "./charts.jsx";
 import { KeywordTable } from "./KeywordTable.jsx";
 import type { Tab } from "./navigation.js";
@@ -44,6 +45,9 @@ const SECTIONS: Record<Tab, { readonly title: string; readonly ids: readonly Rep
   },
   traffic: { title: "Traffic", ids: ["traffic"] },
   search: { title: "Search", ids: ["organic-traffic", "traffic-history", "ranked-keywords"] },
+  // AI citations cost $0.132, more than the rest of the overview together, so
+  // they are bought only when someone opens this section.
+  ai: { title: "AI search", ids: ["ai-citations"] },
   backlinks: { title: "Backlinks", ids: ["domain-rating", "backlinks"] },
 };
 
@@ -244,6 +248,7 @@ const TAB_OF: Record<ReportId, Tab> = {
   "organic-traffic": "search",
   "ranked-keywords": "search",
   "traffic-history": "search",
+  "ai-citations": "ai",
 };
 
 /** One summary row: name, number, age. If it was never bought, say so rather
@@ -635,6 +640,8 @@ function Panel({
             rows={payload.fields}
             {...(payload.keywords ? { keywords: payload.keywords } : {})}
           />
+        ) : id === "ai-citations" ? (
+          <AiCitations fields={payload.fields} />
         ) : (
           <>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-4">
