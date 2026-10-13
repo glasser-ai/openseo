@@ -157,6 +157,7 @@ export function useReport(domain: string, hasKey: boolean) {
                 kind: "fields",
                 fields: reply.fields,
                 ...(reply.keywords ? { keywords: reply.keywords } : {}),
+                ...(reply.series ? { series: reply.series } : {}),
               };
         patch(id, {
           entry: {

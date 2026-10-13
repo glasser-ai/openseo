@@ -18,8 +18,14 @@ export async function persistPanel(
   if (lookup) {
     const fields = lookup.extract(run.output);
     const keywords = lookup.extractKeywords?.(run.output);
+    const series = lookup.extractSeries?.(run.output);
     payload = fields.length
-      ? { kind: "fields", fields, ...(keywords ? { keywords } : {}) }
+      ? {
+          kind: "fields",
+          fields,
+          ...(keywords ? { keywords } : {}),
+          ...(series?.length ? { series } : {}),
+        }
       : { kind: "none", reason: "The Provider has no data for this domain." };
   } else if (record.provider === TRAFFIC_PROVIDER && record.endpoint === TRAFFIC_ENDPOINT) {
     const panel = extractTraffic(run.output);

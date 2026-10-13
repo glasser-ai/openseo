@@ -1,3 +1,5 @@
+import { registrableDomain } from "./site.js";
+
 /**
  * **One** name per concept, shared by the panel and the settings page.
  *
@@ -12,9 +14,19 @@ export const REPORT_TITLE = {
   backlinks: "Backlinks",
   "organic-traffic": "Organic search",
   "ranked-keywords": "Ranking keywords",
+  "traffic-history": "Search traffic, 12 months",
 } as const;
 
-export type LookupId = "domain-rating" | "organic-traffic" | "ranked-keywords" | "backlinks";
+export type LookupId =
+  | "domain-rating"
+  | "organic-traffic"
+  | "ranked-keywords"
+  | "backlinks"
+  | "traffic-history";
+
+/** One point of a month-by-month series. Shares the traffic chart's shape so
+    the same line component draws both. */
+export type SeriesPoint = { readonly date: string; readonly visits: number };
 
 export type KeywordRow = {
   readonly keyword: string;
@@ -44,6 +56,8 @@ export type Lookup = {
   readonly attribution: { readonly label: string; readonly href: string } | null;
   readonly buildInput: (domain: string) => unknown;
   readonly extractKeywords?: (output: unknown) => readonly KeywordRow[];
+  /** A month-by-month series drawn under the figures, oldest first. */
+  readonly extractSeries?: (output: unknown) => readonly SeriesPoint[];
   readonly extract: (output: unknown) => readonly LookupField[];
 };
 
@@ -144,7 +158,85 @@ export const LOOKUPS: readonly Lookup[] = [
       return [];
     },
   },
+  {
+    id: "traffic-history",
+    title: "Search traffic, 12 months",
+    blurb:
+      "Estimated monthly visits from Google search in the US over the last twelve months, as Semrush models them — a trend, not a visit count.",
+    provider: "semrush",
+    endpoint: "/?type=domain_rank_history",
+    attribution: { label: "Data by Semrush", href: "https://www.semrush.com/" },
+    // Semrush keys on the bare domain. One charge per month returned, so the
+    // limit is the bill: 12 rows at $0.00055.
+    buildInput: (domain) => ({
+      domain: registrableDomain(domain),
+      database: "us",
+      display_limit: 12,
+    }),
+    /**
+     * Measured 2026-10-13: {data:[{Date:"20260915", Rank:"130393",
+     * "Organic Traffic":"14289", "Organic Keywords":"22193", ...}]}, newest
+     * first, every value a string.
+     */
+    extract: (output) => {
+      const months = semrushMonths(output);
+      const latest = months[0];
+      const oldest = months.at(-1);
+      if (!latest) return [];
+      const change =
+        oldest && oldest.organic > 0 && months.length > 1
+          ? `${latest.organic >= oldest.organic ? "+" : ""}${Math.round(((latest.organic - oldest.organic) / oldest.organic) * 100)}%`
+          : "—";
+      return [
+        { label: "Organic visits / month", value: compact(latest.organic) },
+        { label: `Change over ${months.length} months`, value: change },
+        { label: "Organic keywords", value: compact(latest.keywords) },
+        { label: "Semrush rank", value: latest.rank === null ? "—" : `#${compact(latest.rank)}` },
+      ].filter((field) => field.value !== "—");
+    },
+    extractSeries: (output) =>
+      semrushMonths(output)
+        .map((month) => ({ date: month.date, visits: month.organic }))
+        .reverse(),
+  },
 ];
+
+type SemrushMonth = {
+  readonly date: string;
+  readonly organic: number;
+  readonly keywords: number;
+  readonly rank: number | null;
+};
+
+/** Semrush rows, newest first as sent. "20260915" names the month and is
+    pinned to its first day so the chart treats it as a month. */
+function semrushMonths(output: unknown): readonly SemrushMonth[] {
+  const rows = (output as { data?: unknown } | null)?.data;
+  if (!Array.isArray(rows)) return [];
+  const months: SemrushMonth[] = [];
+  for (const row of rows) {
+    if (row === null || typeof row !== "object") continue;
+    const record = row as Record<string, unknown>;
+    const raw = typeof record["Date"] === "string" ? record["Date"] : "";
+    if (!/^\d{8}$/.test(raw)) continue;
+    const organic = number(record["Organic Traffic"]);
+    if (organic === null) continue;
+    months.push({
+      date: `${raw.slice(0, 4)}-${raw.slice(4, 6)}-01`,
+      organic,
+      keywords: number(record["Organic Keywords"]) ?? 0,
+      rank: number(record["Rank"]),
+    });
+  }
+  return months;
+}
+
+function number(value: unknown): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 /** A Provider's result is buried in tasks[].result[].items[], at a depth that
     varies by endpoint, so walk the whole thing. */

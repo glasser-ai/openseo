@@ -6,7 +6,13 @@ import { dispatch } from "../glasser/runner.js";
 import { getHistory, getKey, serialized, unresolvedRequest } from "../ledger/store.js";
 import { type PanelEntry, readPanel, readStoredPanel } from "./cache.js";
 import { epochFor, forgetEpoch } from "./epoch.js";
-import { type KeywordRow, LOOKUPS, type LookupField, type LookupId } from "./lookups.js";
+import {
+  type KeywordRow,
+  LOOKUPS,
+  type LookupField,
+  type LookupId,
+  type SeriesPoint,
+} from "./lookups.js";
 import { persistPanel } from "./persist.js";
 import {
   extractTraffic,
@@ -51,6 +57,7 @@ export type RunResult =
       readonly ok: true;
       readonly fields: readonly LookupField[];
       readonly keywords?: readonly KeywordRow[];
+      readonly series?: readonly SeriesPoint[];
       readonly runUrl: string;
       readonly chargeUsd: string | null;
       /** This copy came from the cache and cost nothing. */
@@ -284,6 +291,7 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
         ok: true,
         fields: cached.payload.fields,
         ...(cached.payload.keywords ? { keywords: cached.payload.keywords } : {}),
+        ...(cached.payload.series ? { series: cached.payload.series } : {}),
         runUrl: cached.runUrl,
         chargeUsd: cached.chargeUsd,
         cached: true,
@@ -320,6 +328,7 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
 
   let fields: readonly LookupField[] = [];
   let keywords: readonly KeywordRow[] | undefined;
+  let series: readonly SeriesPoint[] | undefined;
   let runUrl = "";
   let chargeUsd: string | null = null;
 
@@ -340,6 +349,7 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
       await persistPanel({ provider: lookup.provider, endpoint: lookup.endpoint, input }, run);
       fields = lookup.extract(run.output);
       keywords = lookup.extractKeywords?.(run.output);
+      series = lookup.extractSeries?.(run.output);
       runUrl = run.run_url;
       chargeUsd = run.charge_usd;
     },
@@ -382,6 +392,7 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
     ok: true,
     fields,
     ...(keywords ? { keywords } : {}),
+    ...(series?.length ? { series } : {}),
     runUrl,
     chargeUsd,
     cached: false,
