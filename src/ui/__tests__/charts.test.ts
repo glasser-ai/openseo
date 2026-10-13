@@ -336,3 +336,38 @@ it("keeps the closing seam covered on the last slice", async () => {
   const drawn = [...arcExtents(container)].map(([, length]) => length);
   for (const length of drawn) expect(length).toBeGreaterThan(CIRCUMFERENCE / 2);
 });
+
+/*
+ * Twelve months on a 300-unit line leave 27 units per figure, and labelling
+ * every point drew one unreadable band. Past six points only the ends, the
+ * peak and the hovered point carry a figure, and about six months are named.
+ */
+it("thins labels on a twelve-month line and names the newest month", async () => {
+  const visits = [4758, 5273, 6187, 8481, 8553, 9703, 8971, 8416, 8464, 10824, 23528, 14289];
+  const points = visits.map((value, index) => ({
+    date: `${index < 3 ? 2025 : 2026}-${String(((index + 9) % 12) + 1).padStart(2, "0")}-01`,
+    visits: value,
+  }));
+  const container = await render(
+    createElement(MonthlyLine, { points, format: (value: number) => String(value) }),
+  );
+  const texts = [...container.querySelectorAll("svg > g text")].map((node) => node.textContent);
+  const figures = texts.filter((text) => /^\d+$/.test(text ?? ""));
+  expect(figures).toEqual(["4758", "23528", "14289"]);
+  const months = texts.filter((text) => /^[A-Z][a-z]{2}$/.test(text ?? ""));
+  expect(months.length).toBeLessThanOrEqual(6);
+  expect(months.at(-1)).toBe("Sep");
+});
+
+it("still labels every point of a three-month line", async () => {
+  const points = [
+    { date: "2026-07-01", visits: 1 },
+    { date: "2026-08-01", visits: 2 },
+    { date: "2026-09-01", visits: 3 },
+  ];
+  const container = await render(
+    createElement(MonthlyLine, { points, format: (value: number) => String(value) }),
+  );
+  const texts = [...container.querySelectorAll("svg > g text")].map((node) => node.textContent);
+  expect(texts).toEqual(["1", "Jul", "2", "Aug", "3", "Sep"]);
+});

@@ -362,6 +362,26 @@ export function MonthlyLine({
   const line = smoothPath(coords);
   const area = `${line} L${x(points.length - 1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`;
 
+  /*
+   * Labelling every point was drawn for three months. Twelve points on a
+   * 300-unit line leave 27 units per label, and the figures collide into one
+   * unreadable band. Past six points only the ends, the peak and the hovered
+   * point carry a figure, and month names thin out to about six, anchored on
+   * the last month so the newest one is always named.
+   */
+  const dense = points.length > 6;
+  const last = points.length - 1;
+  const peak = points.findIndex((point) => point.visits === max);
+  const monthStep = Math.ceil(points.length / 6);
+  const showValue = (index: number, date: string) =>
+    !dense || index === 0 || index === last || index === peak || hot === date;
+  const showMonth = (index: number) => !dense || (last - index) % monthStep === 0;
+  // An end point next to the peak would print its figure into the peak's: a
+  // spike in the second-to-last month is exactly when both matter. That end
+  // label drops below its point instead, where the line has already fallen.
+  const below = (index: number) =>
+    dense && index !== peak && (index === 0 || index === last) && Math.abs(index - peak) === 1;
+
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
@@ -420,22 +440,26 @@ export function MonthlyLine({
             fill="transparent"
             onPointerEnter={() => setHot(point.date)}
           />
-          <text
-            x={x(index)}
-            y={y(point.visits) - 11}
-            textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}
-            className="fill-foreground text-small font-semibold"
-          >
-            {hot === point.date ? point.visits.toLocaleString("en-US") : format(point.visits)}
-          </text>
-          <text
-            x={x(index)}
-            y={H - 4}
-            textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}
-            className="fill-muted-foreground text-small"
-          >
-            {monthLabel(point.date)}
-          </text>
+          {showValue(index, point.date) && (
+            <text
+              x={x(index)}
+              y={below(index) ? y(point.visits) + 17 : y(point.visits) - 11}
+              textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}
+              className="fill-foreground text-small font-semibold"
+            >
+              {hot === point.date ? point.visits.toLocaleString("en-US") : format(point.visits)}
+            </text>
+          )}
+          {showMonth(index) && (
+            <text
+              x={x(index)}
+              y={H - 4}
+              textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}
+              className="fill-muted-foreground text-small"
+            >
+              {monthLabel(point.date)}
+            </text>
+          )}
         </g>
       ))}
     </svg>
