@@ -53,3 +53,33 @@ it("still ignores channels the Provider reports as zero", () => {
   const panel = run({ direct: 1, search: 0, social: 0 });
   expect(panel?.sources).toHaveLength(1);
 });
+
+/** app.glasser.ai, 2026-10-13: a new site whose first two months read zero.
+    The zeros are measurements and stay on the line. */
+it("keeps months at zero visits on the monthly line", () => {
+  const panel = extractTraffic([
+    {
+      globalRank: { rank: null },
+      engagements: { visits: 274 },
+      estimatedMonthlyVisits: { "2026-07-01": 0, "2026-08-01": 0, "2026-09-01": 274 },
+    },
+  ]);
+  expect(panel?.monthly).toEqual([
+    { date: "2026-07-01", visits: 0 },
+    { date: "2026-08-01", visits: 0 },
+    { date: "2026-09-01", visits: 274 },
+  ]);
+});
+
+/** Similarweb's miss is a complete row of zeros, and it is still no result. */
+it("still treats a row of zeros as not tracked", () => {
+  expect(
+    extractTraffic([
+      {
+        globalRank: { rank: null },
+        engagements: { visits: 0 },
+        estimatedMonthlyVisits: { "2026-07-01": 0, "2026-08-01": 0, "2026-09-01": 0 },
+      },
+    ]),
+  ).toBeNull();
+});

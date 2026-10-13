@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { ageOf, isOutdated } from "../domain/cache.js";
 import {
   type KeywordRow,
@@ -6,11 +6,13 @@ import {
   type LookupField,
   type LookupId,
   REPORT_TITLE,
+  type SeriesPoint,
 } from "../domain/lookups.js";
 import { type Metric, type Tone, toneOf } from "../domain/thresholds.js";
 import { compact, parseCompact } from "../domain/traffic.js";
 import { formatUsd, usdToMicros } from "../ledger/micros.js";
-import { Meter } from "./charts.jsx";
+import { AiCitations } from "./AiCitations.jsx";
+import { Meter, MonthlyLine } from "./charts.jsx";
 import { KeywordTable } from "./KeywordTable.jsx";
 import type { Tab } from "./navigation.js";
 import { TONE_TEXT } from "./palette.js";
@@ -42,8 +44,12 @@ const SECTIONS: Record<Tab, { readonly title: string; readonly ids: readonly Rep
     ids: ["domain-rating", "traffic", "organic-traffic", "backlinks", "ranked-keywords"],
   },
   traffic: { title: "Traffic", ids: ["traffic"] },
-  search: { title: "Search", ids: ["organic-traffic", "ranked-keywords"] },
+  search: { title: "Search", ids: ["organic-traffic", "traffic-history", "ranked-keywords"] },
+  // AI citations cost $0.132, more than the rest of the overview together, so
+  // they are bought only when someone opens this section.
+  ai: { title: "AI search", ids: ["ai-citations"] },
   backlinks: { title: "Backlinks", ids: ["domain-rating", "backlinks"] },
+  site: { title: "Site", ids: ["company", "technologies"] },
 };
 
 const TITLE = REPORT_TITLE;
@@ -242,6 +248,10 @@ const TAB_OF: Record<ReportId, Tab> = {
   backlinks: "backlinks",
   "organic-traffic": "search",
   "ranked-keywords": "search",
+  "traffic-history": "search",
+  "ai-citations": "ai",
+  company: "site",
+  technologies: "site",
 };
 
 /** One summary row: name, number, age. If it was never bought, say so rather
@@ -374,7 +384,9 @@ const FIELD_METRIC: Record<string, Metric> = {
   "Referring pages": "backlinks",
   "Referring IPs": "referring-domains",
   "Est. organic visits / month": "organic-visits",
+  "Organic visits / month": "organic-visits",
   "Ranking keywords": "ranking-keywords",
+  "Organic keywords": "ranking-keywords",
 };
 
 /**
@@ -631,51 +643,59 @@ function Panel({
             rows={payload.fields}
             {...(payload.keywords ? { keywords: payload.keywords } : {})}
           />
+        ) : id === "ai-citations" ? (
+          <AiCitations fields={payload.fields} />
+        ) : layoutOf(id) === "facts" ? (
+          // Results saved before the count row was dropped still carry it.
+          <FactList fields={payload.fields.filter((field) => field.label !== "Technologies")} />
         ) : (
-          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-4">
-            {payload.fields.map((field) => {
-              const metric = FIELD_METRIC[field.label];
-              const score = metric === undefined ? Number.NaN : fieldValue(metric, field.value);
-              const scored = metric !== undefined && Number.isFinite(score);
-              const tone = scored ? toneOf(metric, score) : "neutral";
-              const bounded = scored && BOUNDED.has(metric);
-              const share =
-                field.label === "Broken backlinks"
-                  ? brokenShare(payload.fields, field.value)
-                  : null;
-              return (
-                <div key={field.label} className="min-w-0">
-                  <div
-                    className={`text-figure font-semibold leading-none tabular-nums ${TONE_TEXT[tone]}`}
-                  >
-                    {field.value}
-                  </div>
-                  {/* When a section has one figure and its name is the section's
+          <>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-4">
+              {payload.fields.map((field) => {
+                const metric = FIELD_METRIC[field.label];
+                const score = metric === undefined ? Number.NaN : fieldValue(metric, field.value);
+                const scored = metric !== undefined && Number.isFinite(score);
+                const tone = scored ? toneOf(metric, score) : "neutral";
+                const bounded = scored && BOUNDED.has(metric);
+                const share =
+                  field.label === "Broken backlinks"
+                    ? brokenShare(payload.fields, field.value)
+                    : null;
+                return (
+                  <div key={field.label} className="min-w-0">
+                    <div
+                      className={`text-figure font-semibold leading-none tabular-nums ${TONE_TEXT[tone]}`}
+                    >
+                      {field.value}
+                    </div>
+                    {/* When a section has one figure and its name is the section's
                       name, do not print it twice. "Domain Rating / 71 / Domain
                       Rating" reads like a fault. */}
-                  {!(payload.fields.length === 1 && field.label === TITLE[id]) && (
-                    <div className="mt-1 text-small text-muted-foreground">
-                      {field.label}
-                      {share && ` · ${share}`}
-                    </div>
-                  )}
-                  {/* The meter goes **after** the caption. Between the figure and
+                    {!(payload.fields.length === 1 && field.label === TITLE[id]) && (
+                      <div className="mt-1 text-small text-muted-foreground">
+                        {field.label}
+                        {share && ` · ${share}`}
+                      </div>
+                    )}
+                    {/* The meter goes **after** the caption. Between the figure and
                       the caption it pushes the other cells' captions down and
                       throws the whole row's baselines off. */}
-                  {bounded && (
-                    <Meter
-                      value={score}
-                      label={field.label}
-                      // This is a **score** out of 100, not a percentage.
-                      // Announcing it as "95%" would be wrong.
-                      valueText={`${score} out of 100`}
-                      tone={tone}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    {bounded && (
+                      <Meter
+                        value={score}
+                        label={field.label}
+                        // This is a **score** out of 100, not a percentage.
+                        // Announcing it as "95%" would be wrong.
+                        valueText={`${score} out of 100`}
+                        tone={tone}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {payload.series && payload.series.length > 1 && <SeriesBlock points={payload.series} />}
+          </>
         )
       ) : payload?.kind === "none" ? (
         <p className="mt-3 text-muted-foreground">{payload.reason}</p>
@@ -765,6 +785,110 @@ function Panel({
         </div>
       )}
     </section>
+  );
+}
+
+const layoutOf = (id: ReportId): "figures" | "facts" =>
+  LOOKUPS.find((lookup) => lookup.id === (id as LookupId))?.layout ?? "figures";
+
+/**
+ * Label and value rows for text answers. A company's address or a list of
+ * eleven JavaScript libraries set at figure size reads as a fault, and the
+ * figure grid wraps them into a ragged wall.
+ */
+/** Exported for its link rules' test only. */
+export const FactListForTest = (props: { readonly fields: readonly LookupField[] }) =>
+  FactList(props);
+
+function FactList({ fields }: { readonly fields: readonly LookupField[] }) {
+  return (
+    <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+      {fields.map((field) => (
+        <Fragment key={field.label}>
+          <dt className="text-small text-muted-foreground">{field.label}</dt>
+          <dd className="m-0 min-w-0 break-words">
+            <Linked value={field.value} />
+          </dd>
+        </Fragment>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * A comma-separated value whose parts may be links. Only three kinds become
+ * anchors — https URLs, email addresses and phone numbers — because the text
+ * comes from a Provider: anything else, a javascript: URL included, stays text.
+ * A phone number must start with "+": dates and ranges such as "34 (11-50)"
+ * are digits and dashes too.
+ * Displayed without the scheme, so the card reads as it did before.
+ */
+function Linked({ value }: { readonly value: string }) {
+  const parts = value.split(", ");
+  return (
+    <>
+      {parts.map((part, index) => {
+        const href = /^https?:\/\/[^\s]+$/i.test(part)
+          ? part.replace(/^http:/i, "https:")
+          : /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(part)
+            ? `mailto:${part}`
+            : /^\+[\d\s().-]{7,}$/.test(part)
+              ? `tel:${part.replace(/[^\d+]/g, "")}`
+              : null;
+        const label = part.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
+        return (
+          <Fragment key={`${index}-${part}`}>
+            {index > 0 && ", "}
+            {href ? (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-accent"
+              >
+                {label}
+              </a>
+            ) : (
+              part
+            )}
+          </Fragment>
+        );
+      })}
+    </>
+  );
+}
+
+/** "Oct 2025 – Sep 2026". Within one year the year is written once. */
+function seriesRange(points: readonly { date: string }[]): string {
+  const label = (iso: string, withYear: boolean) => {
+    const date = new Date(`${iso}T00:00:00Z`);
+    return Number.isNaN(date.getTime())
+      ? iso
+      : date.toLocaleString("en-US", {
+          month: "short",
+          timeZone: "UTC",
+          ...(withYear ? { year: "numeric" } : {}),
+        });
+  };
+  const first = points[0]?.date ?? "";
+  const last = points.at(-1)?.date ?? "";
+  const sameYear = first.slice(0, 4) === last.slice(0, 4);
+  return `${label(first, !sameYear)} – ${label(last, true)}`;
+}
+
+/** The month-by-month line under a card's figures, with its range stated so
+    nobody wonders whether it was truncated. */
+function SeriesBlock({ points }: { readonly points: readonly SeriesPoint[] }) {
+  return (
+    <div className="mt-6 border-t border-border pt-4">
+      <div className="flex items-baseline gap-2">
+        <h3 className="text-body font-semibold">By month</h3>
+        <span className="ml-auto text-small text-muted-foreground">{seriesRange(points)}</span>
+      </div>
+      <div className="mt-3">
+        <MonthlyLine points={points} format={compact} />
+      </div>
+    </div>
   );
 }
 

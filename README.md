@@ -9,8 +9,10 @@ powered by [glasser](https://glasser.ai).
 | --- | --- |
 | Domain registration | Public RDAP registries (free) |
 | Traffic | Similarweb through Apify |
-| Search | DataForSEO |
+| Search | DataForSEO, Semrush for the 12-month trend |
+| AI search | Ahrefs AI citation counts |
 | Backlinks | Ahrefs Domain Rating and DataForSEO |
+| Site | Hunter for the company, DataForSEO for the technologies |
 
 ## Install
 
@@ -41,8 +43,9 @@ folder to preserve the extension identity and saved settings.
 Reports are cached locally for **7 days**, or **1 day** for empty results, and reused across tabs
 and browser restarts. Opening a section automatically fetches missing or outdated results. Overview
 is a section of five, so opening the panel on a domain with nothing saved fetches all five, about
-**$0.18**; reopening it within the 7 days costs nothing. The default $5/day covers roughly 28 new
-domains. **Refresh** requests new data. New lookups use your glasser balance; cached results are
+**$0.06**; reopening it within the 7 days costs nothing. The default $5/day covers roughly 80 new
+domains. AI search citations cost **$0.13** and the Site section about **$0.02**; each is fetched
+only when that section is opened. **Refresh** requests new data. New lookups use your glasser balance; cached results are
 free to view.
 
 Settings provides estimated budgets of **$5/day** and **$20/month** per browser profile.

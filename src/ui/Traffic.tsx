@@ -46,6 +46,29 @@ function monthRange(points: readonly { date: string }[]): string {
   return `${label(first, !sameYear)} – ${label(last, true)}`;
 }
 
+/**
+ * The Actor always reports three months. Results saved before 2026-10-13 had
+ * their zero months removed — the extractor dropped every month at zero — so a
+ * new site's 0, 0, 274 was saved as 274 alone and drew a single dot. Any month
+ * missing from the last three is therefore a zero that was dropped, and it is
+ * put back here, so saved copies draw correctly without buying them again.
+ */
+export function withMissingMonths(points: readonly MonthlyPoint[]): readonly MonthlyPoint[] {
+  const last = points.at(-1);
+  if (!last || !/^\d{4}-\d{2}-01$/.test(last.date)) return points;
+  const byDate = new Map(points.map((point) => [point.date, point]));
+  const year = Number(last.date.slice(0, 4));
+  const month = Number(last.date.slice(5, 7));
+  const filled: MonthlyPoint[] = [];
+  for (let back = 2; back >= 0; back--) {
+    const date = new Date(Date.UTC(year, month - 1 - back, 1)).toISOString().slice(0, 10);
+    filled.push(byDate.get(date) ?? { date, visits: 0 });
+  }
+  // Anything older than the three months stays as it was.
+  const earlier = points.filter((point) => point.date < (filled[0]?.date ?? ""));
+  return [...earlier, ...filled];
+}
+
 export function Traffic({ panel }: { readonly panel: TrafficPanel }) {
   const { engagement } = panel;
   // These four were added later. Under the same Endpoint, a panel cached by an
@@ -54,7 +77,7 @@ export function Traffic({ panel }: { readonly panel: TrafficPanel }) {
   // the panel. Caches live across versions, so the component has to accommodate
   // the older shape.
   const sources = panel.sources ?? [];
-  const monthly = panel.monthly ?? [];
+  const monthly = withMissingMonths(panel.monthly ?? []);
   const countries = panel.countries ?? [];
   const globalRank = panel.globalRank ?? null;
   const countryRank = panel.countryRank ?? null;

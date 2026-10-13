@@ -7,6 +7,10 @@ const ICON: Record<Tab, string> = {
   search: "M7.2 12a4.8 4.8 0 1 0 0-9.6 4.8 4.8 0 0 0 0 9.6ZM10.7 10.7 14 14",
   backlinks:
     "M6.5 9.5a2.5 2.5 0 0 0 3.5 0l2-2a2.5 2.5 0 0 0-3.5-3.5l-.8.8M9.5 6.5a2.5 2.5 0 0 0-3.5 0l-2 2A2.5 2.5 0 0 0 7.5 12l.8-.8",
+  // A four-point spark: the mark AI answers carry across products.
+  ai: "M8 2.5 9.4 6.6 13.5 8 9.4 9.4 8 13.5 6.6 9.4 2.5 8l4.1-1.4ZM12.5 2.5v2M11.5 3.5h2",
+  // A building: the company and the stack behind the site.
+  site: "M3 13.5V4.5l5-2 5 2v9M3 13.5h10M6 7h1M9 7h1M6 9.5h1M9 9.5h1M7 13.5v-2h2v2",
 };
 
 /** The left-hand navigation. Vertical, arrow-key navigable, with the selected
