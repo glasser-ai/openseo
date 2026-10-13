@@ -104,3 +104,32 @@ jobs:
           gh release create "$RELEASE_TAG" release-assets/*.zip release-assets/SHA256SUMS \
             --verify-tag --title "OpenSEO $RELEASE_TAG" \
             --notes-file .github/RELEASE_NOTES.md
+
+  # A job of its own so the store credentials reach only this job. They are
+  # secrets of the chrome-web-store environment, which only main may deploy to:
+  # no branch, fork or other repo can read them. It runs after the GitHub
+  # Release, so a store refusal cannot hold that back.
+  chrome-web-store:
+    needs: [check, release]
+    runs-on: ubuntu-latest
+    # The upload may poll for up to 5 minutes.
+    timeout-minutes: 10
+    environment: chrome-web-store
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: openseo-chrome
+          path: release-assets
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+      - name: Submit to the Chrome Web Store for review
+        env:
+          CWS_SERVICE_ACCOUNT_KEY: ${{ secrets.CWS_SERVICE_ACCOUNT_KEY }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_ITEM_ID: egmioohncebomfkepifnhcpddmhoceec
+          RELEASE_TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          node scripts/publish-chrome-web-store.mjs \
+            "release-assets/openseo-${RELEASE_TAG#v}-chrome.zip" "${RELEASE_TAG#v}"

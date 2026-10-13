@@ -73,6 +73,8 @@ See [Contributing](CONTRIBUTING.md) and [Security](SECURITY.md).
 To release, update `package.json` and push to `main`. CI tags `vVERSION`, publishes the
 GitHub Release with the archive and `SHA256SUMS`, and does nothing when the version is
 unchanged. Tags are not pushed by hand.
+CI then uploads the same archive to the Chrome Web Store and submits it for review; a
+version already submitted in the Developer Dashboard is skipped.
 CI checks the code, builds the extension, and publishes the ZIP and SHA-256 checksum.
 
 ## License
