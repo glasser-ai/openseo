@@ -15,9 +15,43 @@ export interface paths {
         put?: never;
         /**
          * Web research
-         * @description Search the web, news and places, read a page's content, or get an answer with sources. Actions search, news, places, scholar, shopping, images, videos and answer take query; scrape and similar take url. Providers: Serper, SerpApi, Exa, DataForSEO. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         * @description Search and retrieve public web content. Every action returns normalized output with the last Run's id, provider and lifecycle status: search gives output.results[], news / places / scholar / shopping / images / videos / similar give output.items[] with fixed fields per row, answer gives output.answer plus citations[], and scrape gives fixed content fields.
+         *
+         *     For scrape, read output.text, output.markdown, output.html and output.raw_html. Missing formats are null; no HTML-to-text conversion is performed. The Provider's native output is not repeated in output; read it from the Run with GET /v1/runs/:id. For search, read output.results[].
+         *
+         *     Read result_status separately from status: success, partial, no_result, error or pending. COMPLETED means the final Run settled with a Provider response; it does not prove usable content. output is null on delivery failure or while pending. partial lists missing_formats. Content semantics remain unverified; text wording and length do not judge quality.
+         *
+         *     charge_usd is the total of this response's runs, including paid failures and empty results. It is null until every listed Run settles. runs[] contains individual charges, statuses and charge_basis without duplicate bodies. A multi-Run total has charge_basis=null. The response is a Solution result, not the stored Run. GET /v1/runs/:id remains native and has an individual charge.
+         *
+         *     For QUEUED/RUNNING (HTTP 202), poll the authenticated result_url on the API origin. That read returns the same normalized contract and total, creates no Runs and does not resume fallback. Terminal results return HTTP 200, including business errors; inspect result_status and error. Reuse the same Idempotency-Key and execution parameters for an intentional retry.
+         *
+         *     Scrape auto uses Serper then Firecrawl within a default 30000 ms request budget. HTML or explicit cache age goes directly to Firecrawl. X/Twitter and LinkedIn enrichment exclude Firecrawl; Exa and DataForSEO are explicit-only. A named Provider never falls back. Empty/invalid output, Provider errors, timeout and missing supported formats can trigger fallback when another route can improve delivery. No cross-Provider content merge. If no Run is admitted, return the admission error.
+         *
+         *     When formats is omitted, Serper/Exa check text and Firecrawl/DataForSEO check markdown; all available native formats are mapped into output. max_charge_usd covers all Runs in this request, including replays. Budgets are held only in request memory; retrying starts a new time window but cannot change an existing Run deadline.
+         *
+         *     Search time_range supports day, week, month and year. Auto selects a Provider that supports the filter. Empty search results do not trigger paid fallback.
          */
         post: operations["gtm-web-research"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/web_research/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a web research result
+         * @description Follow result_url from search or scrape to read normalized output, business result_status and the total charge of the same Runs. HTTP 200 may still contain result_status=pending. This authenticated read creates no Runs, calls no Providers and does not resume fallback or reset budgets. GET /v1/runs/:id remains the native individual Run. The result context is signed, bound to the Workspace and checked against the current Key policy for every Run.
+         */
+        get: operations["gtm-web-research-result"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -35,9 +69,33 @@ export interface paths {
         put?: never;
         /**
          * Company intelligence
-         * @description From a domain, get the company profile and firmographics, technology stack, website traffic, similar companies, funding rounds or news. Providers: Apollo, People Data Labs, Hunter, Prospeo, PredictLeads, LeadMagic, BuiltWith, DataForSEO, Ahrefs, Apify, Exa, Serper. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         * @description Look up a company by domain: profile and firmographics, technology stack, website traffic, similar businesses, funding history and news. Choose an action and supply the domain.
+         *
+         *     Every action returns normalized output with the last Run's id, provider and lifecycle status: enrich and traffic give fixed top-level fields, tech_stack / competitors / news give output.items[] with fixed fields per row, funding gives total_funding_usd plus items[]. The Provider's native output is not repeated in output; it stays on the Run and is readable with GET /v1/runs/:id. A value the selected Provider does not report is null; money is always USD.
+         *
+         *     Read result_status separately from status: success, no_result, error or pending. charge_usd is the total of this response's runs and is null until every listed Run settles; runs[] carries each Run's charge. provider=auto selects the first eligible Provider and tries the next only on PROVIDER_ERROR, TIMED_OUT, or a 503 at admission; a named Provider never falls back. For QUEUED/RUNNING (HTTP 202, today only traffic via Apify), poll the authenticated result_url on the API origin. Reuse the same Idempotency-Key and execution parameters for an intentional retry.
          */
         post: operations["gtm-company-intelligence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/company_intelligence/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a company intelligence result
+         * @description Follow result_url from a company intelligence call to read normalized output, business result_status and the total charge of the same Runs. HTTP 200 may still contain result_status=pending. This authenticated read creates no Runs, calls no Providers and does not resume fallback. GET /v1/runs/:id remains the native individual Run. The result context is signed, bound to the Workspace and checked against the current Key policy for every Run.
+         */
+        get: operations["gtm-company-intelligence-result"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -54,10 +112,34 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Find prospects
-         * @description Find contacts by title, seniority, location or employer, enrich one person's profile, or find a work email. Providers: Apollo, People Data Labs, LeadMagic, ZoomInfo, Hunter, Prospeo. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         * People search
+         * @description Find people by job title, seniority, location, or employer. You can also enrich a known person's profile or find their work email. Choose an action and supply its required fields below.
+         *
+         *     Every action returns normalized output with the last Run's id, provider and lifecycle status: search gives total_matches plus output.items[] of people, enrich and find_email give one person with the same fields at the top level. The Provider's native output is not repeated in output; it stays on the Run and is readable with GET /v1/runs/:id. A value the selected Provider does not report is null.
+         *
+         *     Read result_status separately from status: success, no_result, error or pending. charge_usd is the total of this response's runs and is null until every listed Run settles; runs[] carries each Run's charge. provider=auto selects the first eligible Provider and tries the next only on PROVIDER_ERROR, TIMED_OUT, or a 503 at admission; a named Provider never falls back. Reuse the same Idempotency-Key and execution parameters for an intentional retry.
          */
         post: operations["gtm-people-search"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/people_search/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a people search result
+         * @description Follow result_url from a people search call to read normalized output, business result_status and the total charge of the same Runs. This authenticated read creates no Runs, calls no Providers and does not resume fallback. GET /v1/runs/:id remains the native individual Run. The result context is signed, bound to the Workspace and checked against the current Key policy for every Run.
+         */
+        get: operations["gtm-people-search-result"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -74,10 +156,40 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Keywords and SEO
-         * @description Keyword volume and difficulty, keyword ideas, Google results for a keyword, a domain's organic overview, ranking keywords and organic competitors, backlink totals and rows, referring domains, domain rating. Providers: Semrush, Serpstat, DataForSEO, Ahrefs, Serper. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         * SEO research
+         * @description Research keyword volume and difficulty, search rankings, backlinks, keyword and backlink gaps against competitors, ranking history, site crawls, single-page checks, and AI answer citations. Choose an action and supply keywords, a domain, or a page URL.
+         *
+         *     Every action returns normalized output with the last Run's id, provider and lifecycle status. List actions (keyword_ideas, serp, ranked_keywords, organic_competitors, backlinks, referring_domains, keyword_gap, backlink_gap, visibility_history, ai_citations, and keyword_overview with one row per keyword) expose output.items[] with fixed fields per row; overview actions (domain_overview, backlinks_overview, domain_rating, ai_visibility, page_audit, site_audit) expose fixed top-level fields. The Provider's native output is not repeated in output; it stays on the Run and is readable with GET /v1/runs/:id. A value the selected Provider does not report is null. Values are the answering Provider's own figures (volume, traffic and cpc are its estimates; compare them only within one Provider). Scores from a Provider's own model carry the Provider's name, such as ahrefs_domain_rating or semrush_keyword_difficulty, and are never converted between Providers. Money is always USD.
+         *
+         *     Read result_status separately from status: success, no_result, error or pending. COMPLETED means the final Run settled with a Provider response; an empty but valid answer is no_result and keeps the action's shape (items is [], or every field is null). output is null on error or while pending.
+         *
+         *     charge_usd is the total of this response's runs, including charged empty results and failures, and is null until every listed Run settles. runs[] carries each Run's charge and charge_basis without bodies; a multi-Run total has charge_basis=null. GET /v1/runs/:id remains native with an individual charge.
+         *
+         *     provider=auto selects the first eligible Provider and tries the next only on PROVIDER_ERROR, TIMED_OUT, or a 503 at admission. No-result and in-flight Runs do not trigger fallback. A named Provider never falls back. Each admitted fallback is a separate Run; use task_id to find related Runs.
+         *
+         *     For QUEUED/RUNNING (HTTP 202, today only site_audit), poll the authenticated result_url on the API origin. That read returns the same normalized contract and total, creates no Runs and does not resume fallback. Reuse the same Idempotency-Key and execution parameters for an intentional retry.
          */
         post: operations["gtm-seo-research"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/seo_research/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read an SEO research result
+         * @description Follow result_url from an SEO research call to read normalized output, business result_status and the total charge of the same Runs. HTTP 200 may still contain result_status=pending. This authenticated read creates no Runs, calls no Providers and does not resume fallback. GET /v1/runs/:id remains the native individual Run. The result context is signed, bound to the Workspace and checked against the current Key policy for every Run.
+         */
+        get: operations["gtm-seo-research-result"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -94,10 +206,34 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Social media search
-         * @description Search posts, read a profile or channel, fetch one post, or find an account's other profiles on Reddit, X, YouTube, TikTok, Instagram and LinkedIn. Read-only. Takes platform and mode instead of action; every platform supports every mode. Providers: ScrapeCreators, Apify, TikHub, People Data Labs. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         * Social research
+         * @description Public social media data on Reddit, X, YouTube, TikTok, Instagram and LinkedIn: search posts, read an account, its recent posts or one post, and find the same account on other platforms. Choose a platform and a mode and supply a query, handle or url.
+         *
+         *     Every mode returns normalized output shared by all six platforms, with the last Run's id, provider and lifecycle status: profile gives one account (platform, handle, name, url, bio, headline, website, followers, following, posts, verified), search and feed give output.items[] of posts (id, url, title, text, author, author_url, published_at, likes, comments, shares, views), post gives one post with the same fields, find gives output.profiles[] (platform, url, handle, scrapecreators_confidence, followers; for Reddit the matching subreddits) plus pdl_likelihood. The Provider's native output is not repeated in output; it stays on the Run and is readable with GET /v1/runs/:id. A value a platform or Provider does not report is null.
+         *
+         *     Read result_status separately from status: success, no_result, error or pending. An empty but valid answer is no_result and keeps the mode's shape (items or profiles is [], or every field is null). charge_usd is the total of this response's runs and is null until every listed Run settles. provider=auto selects the first eligible Provider and tries the next only on PROVIDER_ERROR, TIMED_OUT, or a 503 at admission; a named Provider never falls back. For QUEUED/RUNNING (HTTP 202, the Apify routes), poll the authenticated result_url on the API origin. Reuse the same Idempotency-Key and execution parameters for an intentional retry.
          */
         post: operations["gtm-social-research"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/social_research/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a social research result
+         * @description Follow result_url from a social research call to read normalized output, business result_status and the total charge of the same Runs. HTTP 200 may still contain result_status=pending. This authenticated read creates no Runs, calls no Providers and does not resume fallback. GET /v1/runs/:id remains the native individual Run. The result context is signed, bound to the Workspace and checked against the current Key policy for every Run.
+         */
+        get: operations["gtm-social-research-result"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -115,9 +251,33 @@ export interface paths {
         put?: never;
         /**
          * Market data
-         * @description US property values, rent estimates, property records, for-sale and rental listings, ZIP-code market statistics, and stock quotes. Providers: RentCast, SerpApi. Routes to one Endpoint per action; provider auto picks the first preferred Provider this key may run, a named provider forces it. The response is exactly the Run that POST /v1/runs returns — provider-native output, exact charge_usd, run_url; its provider, endpoint and input say which Endpoint served the call. Under auto, a Provider error, timeout or rate limit falls back to the next preferred Provider; a no-result answer does not. Each fallback hop is its own Run, visible in the runs list. Idempotency-Key is required and behaves exactly as on POST /v1/runs.
+         * @description US property values, rent estimates, property records, sale and rental listings, ZIP-level market statistics, and stock quotes. Choose an action and supply an address, a city plus state, a ZIP, or a ticker symbol.
+         *
+         *     Every action returns normalized output with the last Run's id, provider and lifecycle status: property_value, property_rent, market_stats and stock_quote give fixed top-level fields; property_search, listings_sale and listings_rental give output.items[] with fixed fields per row. The Provider's native output is not repeated in output; it stays on the Run and is readable with GET /v1/runs/:id. A value the Provider does not report is null; property money is USD, a stock quote carries its currency.
+         *
+         *     Read result_status separately from status: success, no_result, error or pending. charge_usd is the total of this response's runs and is null until every listed Run settles; runs[] carries each Run's charge. A named Provider never falls back. For QUEUED/RUNNING (HTTP 202), poll the authenticated result_url on the API origin. Reuse the same Idempotency-Key and execution parameters for an intentional retry.
          */
         post: operations["gtm-market-data"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/solutions/gtm/market_data/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a market data result
+         * @description Follow result_url from a market data call to read normalized output, business result_status and the total charge of the same Runs. HTTP 200 may still contain result_status=pending. This authenticated read creates no Runs, calls no Providers and does not resume fallback. GET /v1/runs/:id remains the native individual Run. The result context is signed, bound to the Workspace and checked against the current Key policy for every Run.
+         */
+        get: operations["gtm-market-data-result"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -135,7 +295,9 @@ export interface paths {
         put?: never;
         /**
          * Search runnable endpoints
-         * @description Searches the data sources by keyword and returns ranked endpoint summaries, each identified by provider, endpoint, and endpoint_version, with its price and run mode. Several providers may sell the same capability; the ranking is relevance-only and the price is shown alongside so the caller chooses. Pages are short by default (5, up to 20): read `total` for how many candidates exist, then pass next_cursor back as cursor for the next page; the cursor is bound to the query. The list is already scoped to the calling key's effective policy: every endpoint in it is one this key can run. Each hit carries a `score`, the cosine similarity between the query and that endpoint's description: use it to compare rows, and inspect an endpoint before running it. The ranking returns its nearest candidates rather than withholding them, so neither a page of low scores nor reaching the last page shows that a capability is absent — try other words before concluding that.
+         * @description Find runnable Endpoints by keyword; this returns Endpoint candidates, not business data. Results are ranked by relevance, filtered by your Key's Policy, and include Provider, Endpoint version, Price, and run mode. Compare candidates and Inspect before running.
+         *
+         *     Use next_cursor for more results. Low scores or the last page do not prove that a capability is absent; try different keywords. Reuse the returned task_id for later calls on the same task.
          */
         post: operations["endpoints-search"];
         delete?: never;
@@ -154,8 +316,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Inspect one endpoint: schemas, price, version
-         * @description Returns the full execution contract of one endpoint: the provider-native input JSON Schema, the output JSON Schema when a trustworthy one exists (null otherwise — samples never imply a contract), its source, the price with every charge clause, the current endpoint_version, the run mode, a sample input, and a link to the provider's own documentation. A sync endpoint also publishes timeout_ms, the maximum time from request to terminal response — set your HTTP client timeout above it. Passing endpoint_version selects a supported version, including an older one. Compatible updates keep that version. Unavailable or retired versions answer 409. Price can change without a version change; new Runs use the Price at admission, while accepted Runs keep their original Price.
+         * Inspect an Endpoint
+         * @description Get an Endpoint's input schema, available output schema, Price, example input, version, run mode, and timeout. Inspect before the first Run and use the returned input_schema and endpoint_version.
+         *
+         *     An output_schema of null means no reliable schema is available. Endpoint versions do not lock Price: new Runs use the Price at admission. For sync Endpoints, set your HTTP client timeout above timeout_ms.
          */
         post: operations["endpoints-inspect"];
         delete?: never;
@@ -172,14 +336,21 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List runs
-         * @description Lists runs in reverse order of creation time, with optional filters on status, provider, endpoint, task and metadata. This endpoint uses cursor pagination. The list is scoped by the effective policy: runs of an endpoint this key cannot run are not readable either.
+         * List Runs
+         * @description Review Runs, newest first. Filter by status, Provider, Endpoint, Task, or metadata, and use next_cursor to read the next page. Only Runs permitted by your Key's Policy are visible.
+         *
+         *     Each row is a summary: input and output contain {"omitted": true}, and Provider error bodies are excluded. Use Get a Run for the full input, output, and error details.
          */
         get: operations["runs-list"];
         put?: never;
         /**
-         * Run an endpoint
-         * @description Admits one execution at the selected supported Endpoint version (the default if omitted). The version does not lock Price: new Runs use its current Price, and accepted Runs keep that exact Price through settlement. The policy is checked, a hold is reserved for the price's maximum charge, and a run is created. Input is provider-native — construct it against the inspected input_schema. A sync endpoint always answers 200 with the terminal run inside its published timeout_ms — it never returns 202, so no polling code is needed. An async endpoint answers 200 when the run is terminal within a short server budget, otherwise 202 with the in-flight run, which you can poll or stop. Status reports whether a usable provider response won settlement, never whether the provider accepted the request: a provider 404 or 500 is a COMPLETED run whose provider_response carries the received status, charged by the price's NO_RESULT or PROVIDER_ERROR clause. The Idempotency-Key header is required — a retry with the same key returns the same run and is never charged twice, while the same key with a different request body returns 409. Balance and policy refusals happen before admission and create no run.
+         * Run an Endpoint
+         * @description Execute an Endpoint with Provider-native input prepared from Inspect. Glasser checks your Key's Policy and reserves the maximum charge before creating a Run. A refusal creates no Run and no charge. Reuse the same Idempotency-Key and execution parameters to retry without a second execution.
+         *
+         *     - **200:** the Run has finished. Check its status, Provider response, and charge.
+         *     - **202:** an async Run is still in progress. Use Get Run to read its result. Sync Endpoints always return a finished Run within their published timeout_ms.
+         *
+         *     COMPLETED can include a Provider error; check provider_response. Status and charge are independent: a FAILED Run can have a charge.
          */
         post: operations["runs-create"];
         delete?: never;
@@ -196,8 +367,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get run status and output
-         * @description Returns the current state of one run. When the status is COMPLETED, provider_response is not null: a 2xx body is in output (any JSON shape, null for an empty body), and a non-2xx body is in provider_response.error. When the status is FAILED, failure is not null. Status does not imply that money moved: charge_usd and charge_basis are reported independently, and a FAILED run with a non-zero charge is a normal outcome, not a contradiction.
+         * Get a Run
+         * @description Read a Run's current status, result, and charge. Use this to check an unfinished Run or retrieve a previous result.
+         *
+         *     Check status and provider_response before using output. A COMPLETED Run can include a Provider error; a FAILED Run can still have a charge.
          */
         get: operations["runs-get"];
         put?: never;
@@ -218,8 +391,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Stop a run
-         * @description Requests a stop. Dispatch wins the race: if no provider call has been journaled yet, the run becomes STOPPED immediately, its hold is closed, and the charge is 0. If a call has already been journaled, only stop_requested_at is recorded and the run continues to COMPLETED or FAILED — a result that was paid for is never discarded. A run that is already in a terminal status returns 409, because for billing purposes "I stopped it" and "it had already finished" are not equivalent and the request must not succeed silently.
+         * Stop a Run
+         * @description Request a stop and check the returned status. Accepting the request does not guarantee that execution stopped.
+         *
+         *     - **Before dispatch:** the Run becomes STOPPED with no charge. An expired sync deadline takes precedence and produces FAILED with TIMED_OUT.
+         *     - **After dispatch:** the Run continues; stop_requested_at records your request. Its Price determines the final charge.
+         *     - **Already finished:** returns 409.
          */
         post: operations["runs-stop"];
         delete?: never;
@@ -236,8 +413,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get balance, held and available
-         * @description Returns the balance triple: balance (settled funds), held (reservations for in-flight runs), and available (balance minus held — the number a new run is admitted against). This is also the cheapest authentication probe.
+         * Get balance
+         * @description Check your Workspace's funds and how much is available for new Runs. This free request also confirms that your Key works.
          */
         get: operations["balance"];
         put?: never;
@@ -256,8 +433,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List every balance movement
-         * @description Lists every balance movement in reverse time order: charge, refund, topup, grant, and adjustment. Amounts are exact USD decimal strings, signed (a charge is negative): summing them with decimal arithmetic — not floats — reconciles the balance, and each entry carries balance_after_usd. This endpoint uses cursor pagination.
+         * List balance history
+         * @description Review charges, refunds, top-ups, Grants, and adjustments, newest first. Each entry shows the amount and the balance after it. Filter by kind and use next_cursor to read the next page.
          */
         get: operations["balance-history"];
         put?: never;
@@ -272,6 +449,296 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        WebResearchResult: {
+            id: string;
+            /** @description Open this Run in the console. Requires Workspace membership. */
+            run_url: string;
+            provider: string;
+            endpoint: string;
+            endpoint_version: number;
+            /**
+             * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+            /** @description Why the Run failed. Non-null only when status is FAILED. */
+            failure: {
+                /** @enum {string} */
+                kind: "TIMED_OUT" | "INTERNAL";
+                message: string;
+            } | null;
+            input: Record<string, never>;
+            /**
+             * @description Normalized fields per action. The Provider's native output is not repeated here; it stays on the Run (GET /v1/runs/:id). Values a Provider does not report are null.
+             *
+             *     - search: results[]: url, title, snippet (Google's excerpt; Exa's extracted highlight for Exa), position, published_at, date_text, date (deprecated)
+             *     - news: items[]: title, url, source, published_at, date_text, snippet
+             *     - places: items[]: name, address (Provider's text; may be the street line only), category, rating (1–5), reviews, phone, website, latitude, longitude, google_cid
+             *     - scholar: items[]: title, url, snippet, publication, year, cited_by, pdf_url
+             *     - shopping: items[]: title, url (Google Shopping page), merchant_url, google_product_id, price_text, seller, rating (1–5), reviews, image_url
+             *     - images: items[]: title, image_url, thumbnail_url, source_url, source, width, height
+             *     - videos: items[]: title, url, channel, source, date_text, duration_text, snippet, thumbnail_url
+             *     - answer: answer, citations[]: url, title, published_at
+             *     - scrape: url, final_url, title, text, markdown, html, raw_html, text_character_limit, cached, fetched_at, quality (deprecated)
+             *     - similar: items[]: url, title, exa_similarity_score, published_at, author
+             *
+             *     published_at is ISO 8601 UTC and set only from a Provider's machine timestamp. date_text is Google's display text as returned; it may be relative to the Run's completed_at and is never parsed. rating is Google's 1–5 star average; reviews is a count. source is a publisher or site name. exa_similarity_score is Exa's own score and is comparable only within one response.
+             */
+            output: ({
+                /** @description The requested URL, or the final URL when the Provider reports one. */
+                url: string;
+                /** @description The post-redirect URL as reported by the Provider (Firecrawl, Exa). Null when the Provider does not report one. */
+                final_url: string | null;
+                title: string | null;
+                text: string | null;
+                markdown: string | null;
+                html: string | null;
+                raw_html: string | null;
+                /** @description The character cap Glasser asked the Provider to apply to text (10000 for Exa), so text of exactly this length may be truncated. Null when no cap was applied. */
+                text_character_limit: number | null;
+                /** @description Whether the Provider served the page from its cache (Firecrawl cacheState, Exa status source). Null when the Provider does not say. */
+                cached: boolean | null;
+                /** @description When the Provider fetched the page, ISO 8601 UTC (DataForSEO fetch_time). Null when the Provider does not report it. */
+                fetched_at: string | null;
+                /**
+                 * @description Deprecated: always 'unverified'; no content check is applied. Kept for compatibility and will be removed in the next breaking revision.
+                 * @enum {string}
+                 */
+                quality: "unverified";
+            } | {
+                results: {
+                    url: string;
+                    title: string | null;
+                    /** @description Google's short excerpt (Serper / SerpApi), or Exa's extracted highlight for Exa. Not the full page text. */
+                    snippet: string | null;
+                    position: number;
+                    /** @description Deprecated: use published_at or date_text. Holds Google's display text for Serper / SerpApi and Exa's raw publishedDate for Exa. */
+                    date: string | null;
+                    /** @description ISO 8601 UTC timestamp, filled only when the Provider reports a machine timestamp (Exa publishedDate, SerpApi news iso_date); otherwise null. */
+                    published_at: string | null;
+                    /** @description Google's display text exactly as the Provider returned it (Serper / SerpApi date). It may be relative to the Run's completed_at, such as '3 hours ago', and is never parsed. */
+                    date_text: string | null;
+                }[];
+            } | {
+                items: {
+                    title: string | null;
+                    url: string | null;
+                    /** @description Publisher or site name as the Provider shows it. */
+                    source: string | null;
+                    /** @description ISO 8601 UTC timestamp, filled only when the Provider reports a machine timestamp (Exa publishedDate, SerpApi news iso_date); otherwise null. */
+                    published_at: string | null;
+                    /** @description Google's display text exactly as the Provider returned it (Serper / SerpApi date). It may be relative to the Run's completed_at, such as '3 hours ago', and is never parsed. */
+                    date_text: string | null;
+                    snippet: string | null;
+                }[];
+            } | {
+                items: {
+                    name: string | null;
+                    /** @description The Provider's address text, not parsed or completed. Serper may return only the street line. */
+                    address: string | null;
+                    category: string | null;
+                    /** @description Google's average star rating, 1–5. */
+                    rating: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description Number of Google reviews behind the rating. */
+                    reviews: number | null;
+                    phone: string | null;
+                    website: string | null;
+                    latitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    longitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description Google Maps CID of the place (Serper cid, SerpApi data_cid). */
+                    google_cid: string | null;
+                }[];
+            } | {
+                items: {
+                    title: string | null;
+                    url: string | null;
+                    snippet: string | null;
+                    publication: string | null;
+                    year: number | null;
+                    cited_by: number | null;
+                    pdf_url: string | null;
+                }[];
+            } | {
+                items: {
+                    title: string | null;
+                    /** @description The Google Shopping product page. */
+                    url: string | null;
+                    /** @description The merchant's offer URL when the Provider reports one (SerpApi link); null for Serper. */
+                    merchant_url: string | null;
+                    /** @description Google Shopping catalog product id (Serper productId, SerpApi product_id). */
+                    google_product_id: string | null;
+                    /** @description The Provider's display price, such as '$69.00'. Not parsed; the currency follows country. */
+                    price_text: string | null;
+                    seller: string | null;
+                    /** @description Google's average star rating, 1–5. */
+                    rating: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description Number of Google reviews behind the rating. */
+                    reviews: number | null;
+                    image_url: string | null;
+                }[];
+            } | {
+                items: {
+                    title: string | null;
+                    image_url: string | null;
+                    thumbnail_url: string | null;
+                    source_url: string | null;
+                    /** @description Publisher or site name as the Provider shows it. */
+                    source: string | null;
+                    width: number | null;
+                    height: number | null;
+                }[];
+            } | {
+                items: {
+                    title: string | null;
+                    url: string | null;
+                    channel: string | null;
+                    /** @description Video platform as the Provider shows it, such as YouTube. */
+                    source: string | null;
+                    /** @description Google's display text exactly as the Provider returned it (Serper / SerpApi date). It may be relative to the Run's completed_at, such as '3 hours ago', and is never parsed. */
+                    date_text: string | null;
+                    /** @description Display duration as returned, such as '4:39'. */
+                    duration_text: string | null;
+                    snippet: string | null;
+                    thumbnail_url: string | null;
+                }[];
+            } | {
+                items: {
+                    url: string | null;
+                    title: string | null;
+                    /** @description Exa's own similarity score for this page. Compare it only within one response; it is not comparable to other Providers' scores. */
+                    exa_similarity_score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description ISO 8601 UTC timestamp, filled only when the Provider reports a machine timestamp (Exa publishedDate, SerpApi news iso_date); otherwise null. */
+                    published_at: string | null;
+                    author: string | null;
+                }[];
+            } | {
+                answer: string | null;
+                citations: {
+                    url: string | null;
+                    title: string | null;
+                    /** @description ISO 8601 UTC timestamp, filled only when the Provider reports a machine timestamp (Exa publishedDate, SerpApi news iso_date); otherwise null. */
+                    published_at: string | null;
+                }[];
+            }) | null;
+            /**
+             * @description Non-null only when status is COMPLETED.
+             *
+             *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+             *     - For non-2xx responses, error contains the Provider's error body and output is null.
+             *
+             *     Sensitive fields are removed from both bodies.
+             */
+            provider_response: {
+                /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                http_status: number;
+                error?: unknown | null;
+            } | null;
+            /** @description Total charge of runs in this Solution response. Null until all listed Runs settle. Each Run retains its own charge; failures can also be charged. */
+            charge_usd: string | null;
+            /** @description Single-Run charge basis, or null for a multi-Run total. Read runs[].charge_basis for each charge. */
+            charge_basis: {
+                /** @enum {string} */
+                clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                quantity: number | null;
+            } | null;
+            /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+            stoppable: boolean;
+            /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+            stop_requested_at: string | null;
+            /**
+             * Format: date-time
+             * @description ISO-8601 UTC timestamp
+             */
+            created_at: string;
+            started_at: string | null;
+            completed_at: string | null;
+            task_id: string | null;
+            /**
+             * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+             *
+             *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+             *     - Values: strings of 1–500 characters.
+             *     - user_id: your End user's opaque ID, never their email address or name.
+             */
+            metadata: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            action: "search" | "news" | "places" | "scholar" | "shopping" | "images" | "videos" | "answer" | "scrape" | "similar";
+            /**
+             * @description Business delivery status, independent of the final Run lifecycle in status. success is not a semantic content-quality verdict.
+             * @enum {string}
+             */
+            result_status: "success" | "partial" | "no_result" | "error" | "pending";
+            missing_formats: ("text" | "markdown" | "html" | "raw_html")[];
+            error: {
+                code: string;
+                message: string;
+            } | null;
+            runs: {
+                id: string;
+                /** @description Open this Run in the console. Requires Workspace membership. */
+                run_url: string;
+                provider: string;
+                endpoint: string;
+                endpoint_version: number;
+                /**
+                 * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                 * @enum {string}
+                 */
+                status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                /** @description Why the Run failed. Non-null only when status is FAILED. */
+                failure: {
+                    /** @enum {string} */
+                    kind: "TIMED_OUT" | "INTERNAL";
+                    message: string;
+                } | null;
+                input: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                output: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                provider_response: {
+                    /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                    http_status: number;
+                } | null;
+                /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
+                charge_usd: string | null;
+                /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
+                charge_basis: {
+                    /** @enum {string} */
+                    clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                    quantity: number | null;
+                } | null;
+                /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+                stoppable: boolean;
+                /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+                stop_requested_at: string | null;
+                /**
+                 * Format: date-time
+                 * @description ISO-8601 UTC timestamp
+                 */
+                created_at: string;
+                started_at: string | null;
+                completed_at: string | null;
+                task_id: string | null;
+                /**
+                 * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                 *
+                 *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                 *     - Values: strings of 1–500 characters.
+                 *     - user_id: your End user's opaque ID, never their email address or name.
+                 */
+                metadata: {
+                    [key: string]: string;
+                };
+            }[];
+            /** @description Authenticated, read-only URL path for polling this normalized result and total charge. Use with the API origin. Does not create Runs or resume fallback. GET /v1/runs/:id still returns the native, individual Run. */
+            result_url: string;
+        };
         ValidationFailedEncoded: {
             error: {
                 /** @enum {string} */
@@ -392,6 +859,1348 @@ export interface components {
             };
             request_id: string;
         };
+        CompanyIntelligenceResult: {
+            id: string;
+            /** @description Open this Run in the console. Requires Workspace membership. */
+            run_url: string;
+            provider: string;
+            endpoint: string;
+            endpoint_version: number;
+            /**
+             * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+            /** @description Why the Run failed. Non-null only when status is FAILED. */
+            failure: {
+                /** @enum {string} */
+                kind: "TIMED_OUT" | "INTERNAL";
+                message: string;
+            } | null;
+            input: Record<string, never>;
+            /**
+             * @description Normalized fields per action. The Provider's native output is not repeated here; it stays on the Run (GET /v1/runs/:id). Values a Provider does not report are null; an empty answer is the action's shape with every field null, or items: [], with result_status no_result. Money is USD. Employees and revenue are the Provider's own estimates; *_range_min / *_range_max are the edges of the Provider's bucket. A score from a Provider's own model is named after the Provider (exa_similarity_score) and is null for the others. Labels such as industry, categories, round and category are in the answering Provider's vocabulary.
+             *
+             *     - enrich: name, website, description, industry, employees, employee_range_min, employee_range_max, founded_year, city, region, country, country_code, linkedin_url, phone, total_funding_usd, revenue_usd, revenue_range_min_usd, revenue_range_max_usd, ownership, ticker, latest_funding_date
+             *     - tech_stack: items[]: name, categories[], detection_source, predictleads_confidence, first_detected_date, last_detected_date
+             *     - traffic: monthly_visits, organic_traffic, paid_traffic, organic_keywords, paid_keywords, organic_traffic_value_usd, similarweb_global_rank, bounce_rate, pages_per_visit, avg_visit_duration_seconds
+             *     - competitors: items[]: domain, name, page_title, position, predictleads_similarity_score, exa_similarity_score, reason
+             *     - funding: total_funding_usd, items[]: round_date, round, amount_usd, investors[], source_url
+             *     - news: items[]: title, url, source, published_at, event_date, date_text, category, snippet
+             */
+            output: ({
+                /** @description Company name as the Provider reports it. */
+                name: string | null;
+                /** @description Company website as an http(s) URL. */
+                website: string | null;
+                /** @description Short company description from the Provider. */
+                description: string | null;
+                /** @description Industry label in the answering Provider's own vocabulary (LinkedIn, GICS-style, ...). Not comparable across Providers; check `provider`. */
+                industry: string | null;
+                /** @description Employee count. A Provider's own estimate, not an audited headcount. */
+                employees: number | null;
+                /** @description Lower edge of the Provider's employee-size bucket (for example 10000 for 10K-50K). */
+                employee_range_min: number | null;
+                /** @description Upper edge of the Provider's employee-size bucket; null for an open-ended bucket such as 10000+. */
+                employee_range_max: number | null;
+                /** @description Year the company was founded. */
+                founded_year: number | null;
+                /** @description Headquarters city. */
+                city: string | null;
+                /** @description Headquarters state or region. */
+                region: string | null;
+                /** @description Headquarters country as an English display name (never a code). */
+                country: string | null;
+                /** @description Headquarters country as an ISO 3166-1 alpha-2 code. */
+                country_code: string | null;
+                /** @description LinkedIn company page URL. */
+                linkedin_url: string | null;
+                /** @description Headquarters phone number as the Provider reports it. */
+                phone: string | null;
+                /** @description Total funding raised, USD, as the Provider reports it. */
+                total_funding_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Annual revenue as a single figure, USD: the Provider's estimate or reported number. Null when the Provider only gives a range (see revenue_range_min_usd / revenue_range_max_usd). */
+                revenue_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Lower edge of the Provider's annual-revenue bucket, USD. */
+                revenue_range_min_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Upper edge of the Provider's annual-revenue bucket, USD; null for an open-ended bucket such as $10B+. */
+                revenue_range_max_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Ownership type mapped from the Provider's label. Null when the Provider does not say; private is never inferred. */
+                ownership: ("public" | "private" | "nonprofit" | "government" | "education" | "other") | null;
+                /** @description Stock ticker or public symbol, for public companies. */
+                ticker: string | null;
+                /** @description Date of the latest funding round, YYYY-MM-DD. */
+                latest_funding_date: string | null;
+            } | {
+                /** @description Monthly visits from all channels, worldwide (Similarweb panel estimate). Not scoped to country. */
+                monthly_visits: number | null;
+                /** @description Estimated monthly organic search visits in the request country (default us); a search-model estimate. */
+                organic_traffic: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Estimated monthly paid search visits in the request country (default us). */
+                paid_traffic: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Keywords the domain ranks for organically in the request country. */
+                organic_keywords: number | null;
+                /** @description Keywords the domain bids on in the request country. */
+                paid_keywords: number | null;
+                /** @description Estimated monthly value of the organic traffic, USD (Ahrefs). Null for other Providers. */
+                organic_traffic_value_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Similarweb global rank (1 = most visited). Null for other Providers. */
+                similarweb_global_rank: number | null;
+                /** @description Bounce rate as a fraction 0-1 (Similarweb). */
+                bounce_rate: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Pages per visit (Similarweb). */
+                pages_per_visit: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Average visit duration in seconds (Similarweb). */
+                avg_visit_duration_seconds: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+            } | {
+                /** @description Total funding raised, USD, as the Provider reports it. */
+                total_funding_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                items: {
+                    /** @description Date of the round, YYYY-MM-DD. LeadMagic dates are month precision (day 01). */
+                    round_date: string | null;
+                    /** @description Round label in the answering Provider's vocabulary (seed, Series I, ...). */
+                    round: string | null;
+                    /** @description Amount raised in the round, USD. Null for other currencies. */
+                    amount_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description Investor names. */
+                    investors: string[];
+                    /** @description Source article for the round (PredictLeads). */
+                    source_url: string | null;
+                }[];
+            } | {
+                items: {
+                    /** @description Technology name. */
+                    name: string;
+                    /** @description Category labels in the answering Provider's vocabulary (BuiltWith tag, DataForSEO group/category). Empty when the Provider gives none. */
+                    categories: string[];
+                    /** @description How the technology was detected: crawling the public website, or inferred from job postings (PredictLeads behind-the-firewall detections). */
+                    detection_source: ("website" | "job_postings") | null;
+                    /** @description PredictLeads detection confidence, 0-1. Null for other Providers. */
+                    predictleads_confidence: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description First detection date, YYYY-MM-DD. */
+                    first_detected_date: string | null;
+                    /** @description Latest detection date, YYYY-MM-DD. */
+                    last_detected_date: string | null;
+                }[];
+            } | {
+                items: {
+                    /** @description The similar company's domain (hostname without www. or port). */
+                    domain: string | null;
+                    /** @description The similar company's name. Null when the Provider returns web pages (Exa). */
+                    name: string | null;
+                    /** @description Title of the matched web page (Exa only); not a company name. */
+                    page_title: string | null;
+                    /** @description 1-based rank in the Provider's answer. */
+                    position: number | null;
+                    /** @description PredictLeads company-similarity score, 0-1. Null for other Providers. */
+                    predictleads_similarity_score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description Exa neural similarity between the company's website and the matched page. Null for other Providers. */
+                    exa_similarity_score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description Why the Provider considers the company similar (PredictLeads). */
+                    reason: string | null;
+                }[];
+            } | {
+                items: {
+                    /** @description Headline. */
+                    title: string | null;
+                    /** @description Article URL. */
+                    url: string | null;
+                    /** @description Publisher name (Serper). Null when the Provider gives none. */
+                    source: string | null;
+                    /** @description Article publication time, ISO 8601 UTC. */
+                    published_at: string | null;
+                    /** @description Date the reported event happened, YYYY-MM-DD (PredictLeads). */
+                    event_date: string | null;
+                    /** @description The Provider's display date exactly as returned (Google News, may be relative to completed_at such as '3 hours ago'); never parsed. */
+                    date_text: string | null;
+                    /** @description Event category in the Provider's vocabulary (PredictLeads). */
+                    category: string | null;
+                    /** @description Short excerpt. */
+                    snippet: string | null;
+                }[];
+            }) | null;
+            /**
+             * @description Non-null only when status is COMPLETED.
+             *
+             *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+             *     - For non-2xx responses, error contains the Provider's error body and output is null.
+             *
+             *     Sensitive fields are removed from both bodies.
+             */
+            provider_response: {
+                /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                http_status: number;
+                error?: unknown | null;
+            } | null;
+            /** @description Total charge of runs in this Solution response. Null until all listed Runs settle. Each Run retains its own charge; failures can also be charged. */
+            charge_usd: string | null;
+            /** @description Single-Run charge basis, or null for a multi-Run total. Read runs[].charge_basis for each charge. */
+            charge_basis: {
+                /** @enum {string} */
+                clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                quantity: number | null;
+            } | null;
+            /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+            stoppable: boolean;
+            /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+            stop_requested_at: string | null;
+            /**
+             * Format: date-time
+             * @description ISO-8601 UTC timestamp
+             */
+            created_at: string;
+            started_at: string | null;
+            completed_at: string | null;
+            task_id: string | null;
+            /**
+             * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+             *
+             *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+             *     - Values: strings of 1–500 characters.
+             *     - user_id: your End user's opaque ID, never their email address or name.
+             */
+            metadata: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            action: "enrich" | "tech_stack" | "traffic" | "competitors" | "funding" | "news";
+            /**
+             * @description Business delivery status, independent of the final Run lifecycle in status. no_result is an empty but valid answer; error means the Provider output could not be delivered.
+             * @enum {string}
+             */
+            result_status: "success" | "no_result" | "error" | "pending";
+            error: {
+                code: string;
+                message: string;
+            } | null;
+            runs: {
+                id: string;
+                /** @description Open this Run in the console. Requires Workspace membership. */
+                run_url: string;
+                provider: string;
+                endpoint: string;
+                endpoint_version: number;
+                /**
+                 * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                 * @enum {string}
+                 */
+                status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                /** @description Why the Run failed. Non-null only when status is FAILED. */
+                failure: {
+                    /** @enum {string} */
+                    kind: "TIMED_OUT" | "INTERNAL";
+                    message: string;
+                } | null;
+                input: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                output: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                provider_response: {
+                    /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                    http_status: number;
+                } | null;
+                /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
+                charge_usd: string | null;
+                /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
+                charge_basis: {
+                    /** @enum {string} */
+                    clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                    quantity: number | null;
+                } | null;
+                /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+                stoppable: boolean;
+                /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+                stop_requested_at: string | null;
+                /**
+                 * Format: date-time
+                 * @description ISO-8601 UTC timestamp
+                 */
+                created_at: string;
+                started_at: string | null;
+                completed_at: string | null;
+                task_id: string | null;
+                /**
+                 * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                 *
+                 *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                 *     - Values: strings of 1–500 characters.
+                 *     - user_id: your End user's opaque ID, never their email address or name.
+                 */
+                metadata: {
+                    [key: string]: string;
+                };
+            }[];
+            /** @description Authenticated, read-only URL path for polling this normalized result and total charge. Use with the API origin. Does not create Runs or resume fallback. GET /v1/runs/:id still returns the native, individual Run. */
+            result_url: string;
+        };
+        PeopleSearchResult: {
+            id: string;
+            /** @description Open this Run in the console. Requires Workspace membership. */
+            run_url: string;
+            provider: string;
+            endpoint: string;
+            endpoint_version: number;
+            /**
+             * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+            /** @description Why the Run failed. Non-null only when status is FAILED. */
+            failure: {
+                /** @enum {string} */
+                kind: "TIMED_OUT" | "INTERNAL";
+                message: string;
+            } | null;
+            input: Record<string, never>;
+            /**
+             * @description Normalized fields per action; enrich and find_email return one person with the same fields as a search row. The Provider's native output is not repeated here; it stays on the Run (GET /v1/runs/:id). Values a Provider does not report are null; an empty answer is the action's shape with every field null, or items: [], with result_status no_result. Names, titles and labels are as the Provider reports them. A score from a Provider's own model is named after the Provider (pdl_likelihood) and is null for the others.
+             *
+             *     - search: total_matches, items[]: name, first_name, last_name, job_title, seniority, department, headline, linkedin_url, city, region, country, country_code, email, email_status, email_catch_all, email_source, phone, company_name, company_domain, company_linkedin_url, apollo_match_confidence, pdl_likelihood, hunter_email_score, zoominfo_accuracy_score
+             *     - enrich: name, first_name, last_name, job_title, seniority, department, headline, linkedin_url, city, region, country, country_code, email, email_status, email_catch_all, email_source, phone, company_name, company_domain, company_linkedin_url, apollo_match_confidence, pdl_likelihood, hunter_email_score, zoominfo_accuracy_score
+             *     - find_email: name, first_name, last_name, job_title, seniority, department, headline, linkedin_url, city, region, country, country_code, email, email_status, email_catch_all, email_source, phone, company_name, company_domain, company_linkedin_url, apollo_match_confidence, pdl_likelihood, hunter_email_score, zoominfo_accuracy_score
+             */
+            output: ({
+                /** @description People matching the filters in the Provider's whole dataset, not only this page. Null when the Provider gives only the page count (LeadMagic). */
+                total_matches: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                items: {
+                    /** @description Full name exactly as the Provider reports it (PDL is lower case). Null when the Provider gives only first and last name; never joined. */
+                    name: string | null;
+                    /** @description First name as the Provider reports it. */
+                    first_name: string | null;
+                    /** @description Last name as the Provider reports it. Null when the Provider masks it (Apollo search). */
+                    last_name: string | null;
+                    /** @description Current job title as the Provider reports it. */
+                    job_title: string | null;
+                    /** @description Seniority label in the answering Provider's own vocabulary (Apollo founder, PDL cxo, LeadMagic C-Team, Hunter executive). Not the request's seniorities vocabulary and not comparable across Providers; check provider. When the Provider lists several, the first. */
+                    seniority: string | null;
+                    /** @description Department or job function in the answering Provider's own vocabulary. When the Provider lists several, the first. */
+                    department: string | null;
+                    /** @description Profile headline (the LinkedIn job-title line). */
+                    headline: string | null;
+                    /** @description LinkedIn profile URL. https:// is added when the Provider omits a scheme. */
+                    linkedin_url: string | null;
+                    /** @description City of the person's location. */
+                    city: string | null;
+                    /** @description State or region of the person's location. */
+                    region: string | null;
+                    /** @description Country of the person's location as an English display name (never a code). */
+                    country: string | null;
+                    /** @description Country of the person's location as an ISO 3166-1 alpha-2 code. */
+                    country_code: string | null;
+                    /** @description Work email as the Provider reports it. PDL: work_email only; its other addresses stay on the Run. */
+                    email: string | null;
+                    /** @description The answering Provider's own verification label for email (Apollo verified, Prospeo VERIFIED, Hunter and LeadMagic valid). Providers verify differently, so the labels are not comparable; read it with email_catch_all and email_source. */
+                    email_status: string | null;
+                    /** @description True when the Provider reports that the email's domain accepts every address, so a mailbox check cannot confirm this one (Hunter accept_all, Apollo email_domain_catchall). */
+                    email_catch_all: boolean | null;
+                    /** @description How Hunter got the email: found (seen on the web) or generated (built from the domain's address pattern). Null for other Providers. */
+                    email_source: string | null;
+                    /** @description Phone number as the Provider reports it. Masked numbers are left out. */
+                    phone: string | null;
+                    /** @description Current employer as the Provider reports it. */
+                    company_name: string | null;
+                    /** @description Current employer's domain (hostname without www. or port). */
+                    company_domain: string | null;
+                    /** @description Current employer's LinkedIn company page URL. */
+                    company_linkedin_url: string | null;
+                    /** @description Apollo's confidence that the record matches the input: high, medium, low or none. Null for other Providers. */
+                    apollo_match_confidence: string | null;
+                    /** @description People Data Labs' 1-10 score for how well the record matches the input. Null for other Providers. */
+                    pdl_likelihood: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description Hunter's 0-100 confidence in email (email-finder score, domain-search confidence). Null for other Providers. */
+                    hunter_email_score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description ZoomInfo's 0-100 contact accuracy score. Null for other Providers. */
+                    zoominfo_accuracy_score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                }[];
+            } | {
+                /** @description Full name exactly as the Provider reports it (PDL is lower case). Null when the Provider gives only first and last name; never joined. */
+                name: string | null;
+                /** @description First name as the Provider reports it. */
+                first_name: string | null;
+                /** @description Last name as the Provider reports it. Null when the Provider masks it (Apollo search). */
+                last_name: string | null;
+                /** @description Current job title as the Provider reports it. */
+                job_title: string | null;
+                /** @description Seniority label in the answering Provider's own vocabulary (Apollo founder, PDL cxo, LeadMagic C-Team, Hunter executive). Not the request's seniorities vocabulary and not comparable across Providers; check provider. When the Provider lists several, the first. */
+                seniority: string | null;
+                /** @description Department or job function in the answering Provider's own vocabulary. When the Provider lists several, the first. */
+                department: string | null;
+                /** @description Profile headline (the LinkedIn job-title line). */
+                headline: string | null;
+                /** @description LinkedIn profile URL. https:// is added when the Provider omits a scheme. */
+                linkedin_url: string | null;
+                /** @description City of the person's location. */
+                city: string | null;
+                /** @description State or region of the person's location. */
+                region: string | null;
+                /** @description Country of the person's location as an English display name (never a code). */
+                country: string | null;
+                /** @description Country of the person's location as an ISO 3166-1 alpha-2 code. */
+                country_code: string | null;
+                /** @description Work email as the Provider reports it. PDL: work_email only; its other addresses stay on the Run. */
+                email: string | null;
+                /** @description The answering Provider's own verification label for email (Apollo verified, Prospeo VERIFIED, Hunter and LeadMagic valid). Providers verify differently, so the labels are not comparable; read it with email_catch_all and email_source. */
+                email_status: string | null;
+                /** @description True when the Provider reports that the email's domain accepts every address, so a mailbox check cannot confirm this one (Hunter accept_all, Apollo email_domain_catchall). */
+                email_catch_all: boolean | null;
+                /** @description How Hunter got the email: found (seen on the web) or generated (built from the domain's address pattern). Null for other Providers. */
+                email_source: string | null;
+                /** @description Phone number as the Provider reports it. Masked numbers are left out. */
+                phone: string | null;
+                /** @description Current employer as the Provider reports it. */
+                company_name: string | null;
+                /** @description Current employer's domain (hostname without www. or port). */
+                company_domain: string | null;
+                /** @description Current employer's LinkedIn company page URL. */
+                company_linkedin_url: string | null;
+                /** @description Apollo's confidence that the record matches the input: high, medium, low or none. Null for other Providers. */
+                apollo_match_confidence: string | null;
+                /** @description People Data Labs' 1-10 score for how well the record matches the input. Null for other Providers. */
+                pdl_likelihood: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description Hunter's 0-100 confidence in email (email-finder score, domain-search confidence). Null for other Providers. */
+                hunter_email_score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                /** @description ZoomInfo's 0-100 contact accuracy score. Null for other Providers. */
+                zoominfo_accuracy_score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+            }) | null;
+            /**
+             * @description Non-null only when status is COMPLETED.
+             *
+             *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+             *     - For non-2xx responses, error contains the Provider's error body and output is null.
+             *
+             *     Sensitive fields are removed from both bodies.
+             */
+            provider_response: {
+                /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                http_status: number;
+                error?: unknown | null;
+            } | null;
+            /** @description Total charge of runs in this Solution response. Null until all listed Runs settle. Each Run retains its own charge; failures can also be charged. */
+            charge_usd: string | null;
+            /** @description Single-Run charge basis, or null for a multi-Run total. Read runs[].charge_basis for each charge. */
+            charge_basis: {
+                /** @enum {string} */
+                clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                quantity: number | null;
+            } | null;
+            /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+            stoppable: boolean;
+            /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+            stop_requested_at: string | null;
+            /**
+             * Format: date-time
+             * @description ISO-8601 UTC timestamp
+             */
+            created_at: string;
+            started_at: string | null;
+            completed_at: string | null;
+            task_id: string | null;
+            /**
+             * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+             *
+             *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+             *     - Values: strings of 1–500 characters.
+             *     - user_id: your End user's opaque ID, never their email address or name.
+             */
+            metadata: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            action: "search" | "enrich" | "find_email";
+            /**
+             * @description Business delivery status, independent of the final Run lifecycle in status. no_result is an empty but valid answer; error means the Provider output could not be delivered.
+             * @enum {string}
+             */
+            result_status: "success" | "no_result" | "error" | "pending";
+            error: {
+                code: string;
+                message: string;
+            } | null;
+            runs: {
+                id: string;
+                /** @description Open this Run in the console. Requires Workspace membership. */
+                run_url: string;
+                provider: string;
+                endpoint: string;
+                endpoint_version: number;
+                /**
+                 * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                 * @enum {string}
+                 */
+                status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                /** @description Why the Run failed. Non-null only when status is FAILED. */
+                failure: {
+                    /** @enum {string} */
+                    kind: "TIMED_OUT" | "INTERNAL";
+                    message: string;
+                } | null;
+                input: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                output: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                provider_response: {
+                    /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                    http_status: number;
+                } | null;
+                /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
+                charge_usd: string | null;
+                /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
+                charge_basis: {
+                    /** @enum {string} */
+                    clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                    quantity: number | null;
+                } | null;
+                /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+                stoppable: boolean;
+                /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+                stop_requested_at: string | null;
+                /**
+                 * Format: date-time
+                 * @description ISO-8601 UTC timestamp
+                 */
+                created_at: string;
+                started_at: string | null;
+                completed_at: string | null;
+                task_id: string | null;
+                /**
+                 * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                 *
+                 *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                 *     - Values: strings of 1–500 characters.
+                 *     - user_id: your End user's opaque ID, never their email address or name.
+                 */
+                metadata: {
+                    [key: string]: string;
+                };
+            }[];
+            /** @description Authenticated, read-only URL path for polling this normalized result and total charge. Use with the API origin. Does not create Runs or resume fallback. GET /v1/runs/:id still returns the native, individual Run. */
+            result_url: string;
+        };
+        SeoResearchResult: {
+            id: string;
+            /** @description Open this Run in the console. Requires Workspace membership. */
+            run_url: string;
+            provider: string;
+            endpoint: string;
+            endpoint_version: number;
+            /**
+             * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+            /** @description Why the Run failed. Non-null only when status is FAILED. */
+            failure: {
+                /** @enum {string} */
+                kind: "TIMED_OUT" | "INTERNAL";
+                message: string;
+            } | null;
+            input: Record<string, never>;
+            /**
+             * @description Normalized fields per action. The Provider's native output is not repeated here; it stays on the Run (GET /v1/runs/:id). Values a Provider does not report are null. Money is USD. Authority scores keep the answering Provider's own metric and name and are never converted: ahrefs_domain_rating (Ahrefs Domain Rating, 0–100), semrush_authority_score (Semrush Authority Score, 0–100), dataforseo_rank (DataForSEO rank, 0–1000), serpstat_domain_rank (Serpstat Domain Rank, 0–100). Keyword difficulty is split the same way (semrush_keyword_difficulty, serpstat_keyword_difficulty, dataforseo_keyword_difficulty, ahrefs_keyword_difficulty, each 0–100 on its own model). Only the field of the Provider that answered is filled; the others are null. volume, traffic and cpc are the answering Provider's estimates; compare them only within one Provider (runs[].provider). An empty answer (result_status no_result) keeps the action's shape: items is [], or every field is null.
+             *
+             *     - keyword_overview: items[]: keyword, volume, cpc_usd, semrush_keyword_difficulty, serpstat_keyword_difficulty, dataforseo_keyword_difficulty, ahrefs_keyword_difficulty, intent
+             *     - keyword_ideas: items[]: same row as keyword_overview
+             *     - serp: items[]: position (organic position: 1 = first organic result; SERP features not counted), url, domain, title, snippet (organic results only)
+             *     - domain_overview: organic_keywords, organic_traffic, organic_traffic_value_usd, paid_keywords, paid_traffic
+             *     - ranked_keywords: items[]: keyword, position (organic position: 1 = first organic result; SERP features not counted), url, volume, cpc_usd, traffic
+             *     - organic_competitors: items[]: domain, common_keywords, organic_keywords (the competitor's total), organic_traffic (the target domain and its subdomains are left out)
+             *     - backlinks_overview: backlinks, referring_domains, semrush_authority_score, dataforseo_rank, serpstat_domain_rank, dofollow_backlinks, nofollow_backlinks
+             *     - backlinks: items[]: source_url, target_url, anchor, source_ahrefs_domain_rating, source_semrush_authority_score, source_dataforseo_rank, dofollow, first_seen_at (ISO 8601 UTC; Semrush: zone not stated, no Z suffix). One row per link from every Provider
+             *     - referring_domains: items[]: domain, ahrefs_domain_rating, semrush_authority_score, dataforseo_rank, backlinks, dofollow_backlinks, first_seen_at (ISO 8601 UTC; Semrush: zone not stated, no Z suffix)
+             *     - domain_rating: ahrefs_domain_rating
+             *     - site_audit: dataforseo_task_id (input to DataForSEO's OnPage report endpoints), crawl_progress, crawl_stop_reason (DataForSEO's vocabulary), pages_crawled, dataforseo_onpage_score, broken_links, non_indexable, duplicate_title, duplicate_description, duplicate_content
+             *     - keyword_gap: items[]: keyword, volume, cpc_usd, semrush_keyword_difficulty, dataforseo_keyword_difficulty, positions {domain: organic position; null = not in the top 100}, keyed by the domains sent. Semrush rows are keywords any of the domains ranks for (union); DataForSEO rows are keywords the competitor ranks for and you do not
+             *     - backlink_gap: items[]: domain, dataforseo_rank, backlinks_per_target {competitor domain: count}
+             *     - page_audit: url, status_code, title, description, canonical, dataforseo_onpage_score, internal_links, external_links
+             *     - visibility_history: items[]: month, organic_keywords, organic_traffic, organic_traffic_value_usd, paid_keywords, paid_traffic
+             *     - ai_citations: items[]: url, platform, mentions, ai_search_volume, is_target_domain (pages most cited in AI answers that mention the domain, from any site)
+             *     - ai_visibility: ahrefs_ai_citations, ahrefs_ai_cited_pages, ahrefs_ai_citations_by_platform {platform: citations}, dataforseo_ai_mentions_by_platform {platform: mentions}, dataforseo_ai_search_volume_by_platform {platform: AI search volume}. Each Provider fills only its own fields; no cross-Provider total
+             */
+            output: ({
+                items: {
+                    keyword: string | null;
+                    volume: number | null;
+                    cpc_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    semrush_keyword_difficulty: number | null;
+                    serpstat_keyword_difficulty: number | null;
+                    dataforseo_keyword_difficulty: number | null;
+                    ahrefs_keyword_difficulty: number | null;
+                    intent: string | null;
+                }[];
+            } | {
+                items: {
+                    position: number | null;
+                    url: string | null;
+                    domain: string | null;
+                    title: string | null;
+                    snippet: string | null;
+                }[];
+            } | {
+                organic_keywords: number | null;
+                organic_traffic: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                organic_traffic_value_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                paid_keywords: number | null;
+                paid_traffic: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+            } | {
+                items: {
+                    keyword: string | null;
+                    position: number | null;
+                    url: string | null;
+                    volume: number | null;
+                    cpc_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    traffic: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                }[];
+            } | {
+                items: {
+                    domain: string | null;
+                    common_keywords: number | null;
+                    organic_keywords: number | null;
+                    organic_traffic: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                }[];
+            } | {
+                backlinks: number | null;
+                referring_domains: number | null;
+                semrush_authority_score: number | null;
+                dataforseo_rank: number | null;
+                serpstat_domain_rank: number | null;
+                dofollow_backlinks: number | null;
+                nofollow_backlinks: number | null;
+            } | {
+                items: {
+                    source_url: string | null;
+                    target_url: string | null;
+                    anchor: string | null;
+                    source_ahrefs_domain_rating: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    source_semrush_authority_score: number | null;
+                    source_dataforseo_rank: number | null;
+                    dofollow: boolean | null;
+                    first_seen_at: string | null;
+                }[];
+            } | {
+                items: {
+                    domain: string | null;
+                    ahrefs_domain_rating: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    semrush_authority_score: number | null;
+                    dataforseo_rank: number | null;
+                    backlinks: number | null;
+                    dofollow_backlinks: number | null;
+                    first_seen_at: string | null;
+                }[];
+            } | {
+                ahrefs_domain_rating: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+            } | {
+                dataforseo_task_id: string | null;
+                crawl_progress: string | null;
+                crawl_stop_reason: string | null;
+                pages_crawled: number | null;
+                dataforseo_onpage_score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                broken_links: number | null;
+                non_indexable: number | null;
+                duplicate_title: number | null;
+                duplicate_description: number | null;
+                duplicate_content: number | null;
+            } | {
+                items: {
+                    keyword: string | null;
+                    volume: number | null;
+                    cpc_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    semrush_keyword_difficulty: number | null;
+                    dataforseo_keyword_difficulty: number | null;
+                    positions: {
+                        [key: string]: number | null;
+                    };
+                }[];
+            } | {
+                items: {
+                    domain: string | null;
+                    dataforseo_rank: number | null;
+                    backlinks_per_target: {
+                        [key: string]: number | null;
+                    };
+                }[];
+            } | {
+                url: string | null;
+                status_code: number | null;
+                title: string | null;
+                description: string | null;
+                canonical: string | null;
+                dataforseo_onpage_score: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                internal_links: number | null;
+                external_links: number | null;
+            } | {
+                items: {
+                    month: string | null;
+                    organic_keywords: number | null;
+                    organic_traffic: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    organic_traffic_value_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    paid_keywords: number | null;
+                    paid_traffic: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                }[];
+            } | {
+                items: {
+                    url: string | null;
+                    platform: string | null;
+                    mentions: number | null;
+                    ai_search_volume: number | null;
+                    is_target_domain: boolean | null;
+                }[];
+            } | {
+                ahrefs_ai_citations: number | null;
+                ahrefs_ai_cited_pages: number | null;
+                ahrefs_ai_citations_by_platform: {
+                    [key: string]: number | null;
+                } | null;
+                dataforseo_ai_mentions_by_platform: {
+                    [key: string]: number | null;
+                } | null;
+                dataforseo_ai_search_volume_by_platform: {
+                    [key: string]: number | null;
+                } | null;
+            }) | null;
+            /**
+             * @description Non-null only when status is COMPLETED.
+             *
+             *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+             *     - For non-2xx responses, error contains the Provider's error body and output is null.
+             *
+             *     Sensitive fields are removed from both bodies.
+             */
+            provider_response: {
+                /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                http_status: number;
+                error?: unknown | null;
+            } | null;
+            /** @description Total charge of runs in this Solution response. Null until all listed Runs settle. Each Run retains its own charge; failures can also be charged. */
+            charge_usd: string | null;
+            /** @description Single-Run charge basis, or null for a multi-Run total. Read runs[].charge_basis for each charge. */
+            charge_basis: {
+                /** @enum {string} */
+                clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                quantity: number | null;
+            } | null;
+            /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+            stoppable: boolean;
+            /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+            stop_requested_at: string | null;
+            /**
+             * Format: date-time
+             * @description ISO-8601 UTC timestamp
+             */
+            created_at: string;
+            started_at: string | null;
+            completed_at: string | null;
+            task_id: string | null;
+            /**
+             * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+             *
+             *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+             *     - Values: strings of 1–500 characters.
+             *     - user_id: your End user's opaque ID, never their email address or name.
+             */
+            metadata: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            action: "keyword_overview" | "keyword_ideas" | "serp" | "domain_overview" | "ranked_keywords" | "organic_competitors" | "backlinks_overview" | "backlinks" | "referring_domains" | "domain_rating" | "site_audit" | "ai_visibility" | "keyword_gap" | "backlink_gap" | "page_audit" | "visibility_history" | "ai_citations";
+            /**
+             * @description Business delivery status, independent of the final Run lifecycle in status. no_result is an empty but valid answer; error means the Provider output could not be delivered.
+             * @enum {string}
+             */
+            result_status: "success" | "no_result" | "error" | "pending";
+            error: {
+                code: string;
+                message: string;
+            } | null;
+            runs: {
+                id: string;
+                /** @description Open this Run in the console. Requires Workspace membership. */
+                run_url: string;
+                provider: string;
+                endpoint: string;
+                endpoint_version: number;
+                /**
+                 * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                 * @enum {string}
+                 */
+                status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                /** @description Why the Run failed. Non-null only when status is FAILED. */
+                failure: {
+                    /** @enum {string} */
+                    kind: "TIMED_OUT" | "INTERNAL";
+                    message: string;
+                } | null;
+                input: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                output: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                provider_response: {
+                    /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                    http_status: number;
+                } | null;
+                /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
+                charge_usd: string | null;
+                /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
+                charge_basis: {
+                    /** @enum {string} */
+                    clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                    quantity: number | null;
+                } | null;
+                /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+                stoppable: boolean;
+                /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+                stop_requested_at: string | null;
+                /**
+                 * Format: date-time
+                 * @description ISO-8601 UTC timestamp
+                 */
+                created_at: string;
+                started_at: string | null;
+                completed_at: string | null;
+                task_id: string | null;
+                /**
+                 * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                 *
+                 *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                 *     - Values: strings of 1–500 characters.
+                 *     - user_id: your End user's opaque ID, never their email address or name.
+                 */
+                metadata: {
+                    [key: string]: string;
+                };
+            }[];
+            /** @description Authenticated, read-only URL path for polling this normalized result and total charge. Use with the API origin. Does not create Runs or resume fallback. GET /v1/runs/:id still returns the native, individual Run. */
+            result_url: string;
+        };
+        SocialResearchResult: {
+            id: string;
+            /** @description Open this Run in the console. Requires Workspace membership. */
+            run_url: string;
+            provider: string;
+            endpoint: string;
+            endpoint_version: number;
+            /**
+             * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+            /** @description Why the Run failed. Non-null only when status is FAILED. */
+            failure: {
+                /** @enum {string} */
+                kind: "TIMED_OUT" | "INTERNAL";
+                message: string;
+            } | null;
+            input: Record<string, never>;
+            /**
+             * @description Normalized fields per mode, shared by every platform. The Provider's native output is not repeated here; it stays on the Run (GET /v1/runs/:id). Values a platform or Provider does not report are null.
+             *
+             *     - profile: platform, handle, name, url, bio, headline, website, followers, following, posts, verified
+             *     - search: items[]: id, url, title, text, author, author_url, published_at, likes, comments, shares, views
+             *     - feed: items[]: same post fields as search
+             *     - post: id, url, title, text, author, author_url, published_at, likes, comments, shares, views
+             *     - find: profiles[]: platform, url, handle, scrapecreators_confidence, followers (Reddit: matching subreddits); pdl_likelihood
+             */
+            output: ({
+                platform: string | null;
+                handle: string | null;
+                name: string | null;
+                url: string | null;
+                /** @description Free-text description (LinkedIn: the About section). */
+                bio: string | null;
+                /** @description LinkedIn person headline (job title line); null on other platforms. */
+                headline: string | null;
+                /** @description The account's own website: LinkedIn company website, X profile link (expanded, never t.co); null elsewhere. */
+                website: string | null;
+                /** @description Followers; Reddit: subreddit subscribers; YouTube: subscribers. */
+                followers: number | null;
+                /** @description Accounts this account follows. Null on Reddit, YouTube and LinkedIn. */
+                following: number | null;
+                posts: number | null;
+                verified: boolean | null;
+            } | {
+                items: {
+                    /** @description The platform's post id. LinkedIn: the bare activity id (no urn:li:activity: prefix). */
+                    id: string | null;
+                    url: string | null;
+                    /** @description Reddit and YouTube title; null on other platforms. */
+                    title: string | null;
+                    /** @description The post body: Reddit self-text, YouTube description, the tweet, caption or post text. Null when the Provider returns no body (a Reddit link post, a YouTube search result). */
+                    text: string | null;
+                    /** @description Display name, or the handle where the platform shows no other name (X, TikTok, Instagram, Reddit). */
+                    author: string | null;
+                    author_url: string | null;
+                    /** @description ISO 8601 UTC publish time; null when the Provider gives no exact time. */
+                    published_at: string | null;
+                    /** @description Reddit: net score (upvotes minus downvotes, can be negative). X: favorites. TikTok: diggs. Others: likes or reactions. */
+                    likes: number | null;
+                    comments: number | null;
+                    /** @description X: retweets. TikTok: share count (share-sheet sends, not reposts). LinkedIn: reposts. Null on Reddit, YouTube and Instagram. */
+                    shares: number | null;
+                    /** @description X: impressions. TikTok: plays. YouTube: views. Instagram: video views. Null on Reddit and LinkedIn. */
+                    views: number | null;
+                }[];
+            } | {
+                /** @description The platform's post id. LinkedIn: the bare activity id (no urn:li:activity: prefix). */
+                id: string | null;
+                url: string | null;
+                /** @description Reddit and YouTube title; null on other platforms. */
+                title: string | null;
+                /** @description The post body: Reddit self-text, YouTube description, the tweet, caption or post text. Null when the Provider returns no body (a Reddit link post, a YouTube search result). */
+                text: string | null;
+                /** @description Display name, or the handle where the platform shows no other name (X, TikTok, Instagram, Reddit). */
+                author: string | null;
+                author_url: string | null;
+                /** @description ISO 8601 UTC publish time; null when the Provider gives no exact time. */
+                published_at: string | null;
+                /** @description Reddit: net score (upvotes minus downvotes, can be negative). X: favorites. TikTok: diggs. Others: likes or reactions. */
+                likes: number | null;
+                comments: number | null;
+                /** @description X: retweets. TikTok: share count (share-sheet sends, not reposts). LinkedIn: reposts. Null on Reddit, YouTube and Instagram. */
+                shares: number | null;
+                /** @description X: impressions. TikTok: plays. YouTube: views. Instagram: video views. Null on Reddit and LinkedIn. */
+                views: number | null;
+            } | {
+                profiles: {
+                    /** @description Lower-case network name. The six social_research platforms use their request names (twitter is x); other networks (facebook, github, …) pass through. */
+                    platform: string | null;
+                    url: string | null;
+                    /** @description The username on that network, usable as social_research `handle`; null when the Provider has none. */
+                    handle: string | null;
+                    /** @description ScrapeCreators' 0–1 confidence that this profile belongs to the account. Null on other Providers. */
+                    scrapecreators_confidence: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    /** @description reddit.find: subreddit subscribers. Null on other platforms. */
+                    followers: number | null;
+                }[];
+                /** @description People Data Labs' 1–10 score for how well the person record matches the input; it covers the whole person, not one profile. linkedin.find only; null elsewhere. */
+                pdl_likelihood: number | null;
+            }) | null;
+            /**
+             * @description Non-null only when status is COMPLETED.
+             *
+             *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+             *     - For non-2xx responses, error contains the Provider's error body and output is null.
+             *
+             *     Sensitive fields are removed from both bodies.
+             */
+            provider_response: {
+                /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                http_status: number;
+                error?: unknown | null;
+            } | null;
+            /** @description Total charge of runs in this Solution response. Null until all listed Runs settle. Each Run retains its own charge; failures can also be charged. */
+            charge_usd: string | null;
+            /** @description Single-Run charge basis, or null for a multi-Run total. Read runs[].charge_basis for each charge. */
+            charge_basis: {
+                /** @enum {string} */
+                clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                quantity: number | null;
+            } | null;
+            /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+            stoppable: boolean;
+            /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+            stop_requested_at: string | null;
+            /**
+             * Format: date-time
+             * @description ISO-8601 UTC timestamp
+             */
+            created_at: string;
+            started_at: string | null;
+            completed_at: string | null;
+            task_id: string | null;
+            /**
+             * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+             *
+             *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+             *     - Values: strings of 1–500 characters.
+             *     - user_id: your End user's opaque ID, never their email address or name.
+             */
+            metadata: {
+                [key: string]: string;
+            };
+            /** @description `<platform>.<mode>`; a LinkedIn company page in profile mode is linkedin.company. */
+            action: string;
+            /**
+             * @description Business delivery status, independent of the final Run lifecycle in status. no_result is an empty but valid answer; error means the Provider output could not be delivered.
+             * @enum {string}
+             */
+            result_status: "success" | "no_result" | "error" | "pending";
+            error: {
+                code: string;
+                message: string;
+            } | null;
+            runs: {
+                id: string;
+                /** @description Open this Run in the console. Requires Workspace membership. */
+                run_url: string;
+                provider: string;
+                endpoint: string;
+                endpoint_version: number;
+                /**
+                 * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                 * @enum {string}
+                 */
+                status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                /** @description Why the Run failed. Non-null only when status is FAILED. */
+                failure: {
+                    /** @enum {string} */
+                    kind: "TIMED_OUT" | "INTERNAL";
+                    message: string;
+                } | null;
+                input: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                output: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                provider_response: {
+                    /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                    http_status: number;
+                } | null;
+                /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
+                charge_usd: string | null;
+                /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
+                charge_basis: {
+                    /** @enum {string} */
+                    clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                    quantity: number | null;
+                } | null;
+                /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+                stoppable: boolean;
+                /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+                stop_requested_at: string | null;
+                /**
+                 * Format: date-time
+                 * @description ISO-8601 UTC timestamp
+                 */
+                created_at: string;
+                started_at: string | null;
+                completed_at: string | null;
+                task_id: string | null;
+                /**
+                 * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                 *
+                 *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                 *     - Values: strings of 1–500 characters.
+                 *     - user_id: your End user's opaque ID, never their email address or name.
+                 */
+                metadata: {
+                    [key: string]: string;
+                };
+            }[];
+            /** @description Authenticated, read-only URL path for polling this normalized result and total charge. Use with the API origin. Does not create Runs or resume fallback. GET /v1/runs/:id still returns the native, individual Run. */
+            result_url: string;
+        };
+        MarketDataResult: {
+            id: string;
+            /** @description Open this Run in the console. Requires Workspace membership. */
+            run_url: string;
+            provider: string;
+            endpoint: string;
+            endpoint_version: number;
+            /**
+             * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+            /** @description Why the Run failed. Non-null only when status is FAILED. */
+            failure: {
+                /** @enum {string} */
+                kind: "TIMED_OUT" | "INTERNAL";
+                message: string;
+            } | null;
+            input: Record<string, never>;
+            /**
+             * @description Normalized fields per action. The Provider's native output is not repeated here; it stays on the Run (GET /v1/runs/:id). Values a Provider does not report are null; an empty answer keeps the action's shape with every field null (or items: []) and result_status no_result. Money is USD unless the action carries a currency field. Dates named *_date are YYYY-MM-DD, *_at are ISO 8601 UTC, and *_text is display text exactly as returned.
+             *
+             *     - property_value: address, property_type, bedrooms, bathrooms, living_area_sqft (living area), lot_size_sqft, year_built, latitude, longitude, estimated_value_usd, value_low_usd, value_high_usd, comparables_count (number of comparable sales behind the estimate)
+             *     - property_rent: address, property_type, bedrooms, bathrooms, living_area_sqft (living area), lot_size_sqft, year_built, latitude, longitude, estimated_rent_usd (monthly), rent_low_usd, rent_high_usd, comparables_count (number of comparable rentals behind the estimate)
+             *     - property_search: items[]: property_id, address, property_type, bedrooms, bathrooms, living_area_sqft (living area), lot_size_sqft, year_built, latitude, longitude, last_sale_price_usd, last_sale_date (YYYY-MM-DD), owner_names[], owner_type, owner_mailing_address, owner_occupied
+             *     - listings_sale: items[]: listing_id, address, property_type, bedrooms, bathrooms, living_area_sqft (living area), lot_size_sqft, year_built, latitude, longitude, status, listing_type, listed_date (YYYY-MM-DD), days_on_market, hoa_fee_usd (monthly HOA fee), mls_name, mls_number, agent {name, phone, email, website}, office {name, phone, email, website}, price_usd (asking price)
+             *     - listings_rental: items[]: listing_id, address, property_type, bedrooms, bathrooms, living_area_sqft (living area), lot_size_sqft, year_built, latitude, longitude, status, listing_type, listed_date (YYYY-MM-DD), days_on_market, hoa_fee_usd (monthly HOA fee), mls_name, mls_number, agent {name, phone, email, website}, office {name, phone, email, website}, monthly_rent_usd
+             *     - market_stats: zip, updated_at (ISO 8601 UTC, when RentCast last refreshed the aggregate), sale {average_price_usd, median_price_usd, average_price_per_sqft_usd, median_price_per_sqft_usd, average_days_on_market, median_days_on_market, total_listings, new_listings}, rental {average_rent_usd, median_rent_usd, average_rent_per_sqft_usd, median_rent_per_sqft_usd (monthly rent), average_days_on_market, median_days_on_market, total_listings, new_listings}
+             *     - stock_quote: symbol, name, exchange, currency, price (regular-session last price, in currency; Google Finance quotes may be delayed), change (absolute, in currency, vs the previous regular close), change_percent (percent points vs the previous regular close: 1.5 = 1.5%), extended_hours_session (the session label as shown, e.g. Pre-market or After hours; null during regular hours), extended_hours_price, extended_hours_change and extended_hours_change_percent (the extended-hours quote vs the regular-session price, same units), as_of_text (the Google Finance page timestamp exactly as shown, not ISO and not the time of price)
+             */
+            output: ({
+                address: string | null;
+                property_type: string | null;
+                bedrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                bathrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                living_area_sqft: number | null;
+                lot_size_sqft: number | null;
+                year_built: number | null;
+                latitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                longitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                estimated_value_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                value_low_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                value_high_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                comparables_count: number | null;
+            } | {
+                address: string | null;
+                property_type: string | null;
+                bedrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                bathrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                living_area_sqft: number | null;
+                lot_size_sqft: number | null;
+                year_built: number | null;
+                latitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                longitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                estimated_rent_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                rent_low_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                rent_high_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                comparables_count: number | null;
+            } | {
+                items: {
+                    property_id: string | null;
+                    address: string | null;
+                    property_type: string | null;
+                    bedrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    bathrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    living_area_sqft: number | null;
+                    lot_size_sqft: number | null;
+                    year_built: number | null;
+                    latitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    longitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    last_sale_price_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    last_sale_date: string | null;
+                    owner_names: string[] | null;
+                    owner_type: string | null;
+                    owner_mailing_address: string | null;
+                    owner_occupied: boolean | null;
+                }[];
+            } | {
+                items: {
+                    listing_id: string | null;
+                    address: string | null;
+                    property_type: string | null;
+                    bedrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    bathrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    living_area_sqft: number | null;
+                    lot_size_sqft: number | null;
+                    year_built: number | null;
+                    latitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    longitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    status: string | null;
+                    listing_type: string | null;
+                    listed_date: string | null;
+                    days_on_market: number | null;
+                    hoa_fee_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    mls_name: string | null;
+                    mls_number: string | null;
+                    agent: {
+                        name: string | null;
+                        phone: string | null;
+                        email: string | null;
+                        website: string | null;
+                    } | null;
+                    office: {
+                        name: string | null;
+                        phone: string | null;
+                        email: string | null;
+                        website: string | null;
+                    } | null;
+                    price_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                }[];
+            } | {
+                items: {
+                    listing_id: string | null;
+                    address: string | null;
+                    property_type: string | null;
+                    bedrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    bathrooms: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    living_area_sqft: number | null;
+                    lot_size_sqft: number | null;
+                    year_built: number | null;
+                    latitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    longitude: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    status: string | null;
+                    listing_type: string | null;
+                    listed_date: string | null;
+                    days_on_market: number | null;
+                    hoa_fee_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    mls_name: string | null;
+                    mls_number: string | null;
+                    agent: {
+                        name: string | null;
+                        phone: string | null;
+                        email: string | null;
+                        website: string | null;
+                    } | null;
+                    office: {
+                        name: string | null;
+                        phone: string | null;
+                        email: string | null;
+                        website: string | null;
+                    } | null;
+                    monthly_rent_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                }[];
+            } | {
+                zip: string | null;
+                updated_at: string | null;
+                sale: {
+                    average_price_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    median_price_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    average_price_per_sqft_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    median_price_per_sqft_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    average_days_on_market: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    median_days_on_market: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    total_listings: number | null;
+                    new_listings: number | null;
+                } | null;
+                rental: {
+                    average_rent_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    median_rent_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    average_rent_per_sqft_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    median_rent_per_sqft_usd: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    average_days_on_market: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    median_days_on_market: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    total_listings: number | null;
+                    new_listings: number | null;
+                } | null;
+            } | {
+                symbol: string | null;
+                name: string | null;
+                exchange: string | null;
+                currency: string | null;
+                price: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                change: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                change_percent: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                extended_hours_session: string | null;
+                extended_hours_price: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                extended_hours_change: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                extended_hours_change_percent: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                as_of_text: string | null;
+            }) | null;
+            /**
+             * @description Non-null only when status is COMPLETED.
+             *
+             *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+             *     - For non-2xx responses, error contains the Provider's error body and output is null.
+             *
+             *     Sensitive fields are removed from both bodies.
+             */
+            provider_response: {
+                /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                http_status: number;
+                error?: unknown | null;
+            } | null;
+            /** @description Total charge of runs in this Solution response. Null until all listed Runs settle. Each Run retains its own charge; failures can also be charged. */
+            charge_usd: string | null;
+            /** @description Single-Run charge basis, or null for a multi-Run total. Read runs[].charge_basis for each charge. */
+            charge_basis: {
+                /** @enum {string} */
+                clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                quantity: number | null;
+            } | null;
+            /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+            stoppable: boolean;
+            /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+            stop_requested_at: string | null;
+            /**
+             * Format: date-time
+             * @description ISO-8601 UTC timestamp
+             */
+            created_at: string;
+            started_at: string | null;
+            completed_at: string | null;
+            task_id: string | null;
+            /**
+             * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+             *
+             *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+             *     - Values: strings of 1–500 characters.
+             *     - user_id: your End user's opaque ID, never their email address or name.
+             */
+            metadata: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            action: "property_value" | "property_rent" | "property_search" | "listings_sale" | "listings_rental" | "market_stats" | "stock_quote";
+            /**
+             * @description Business delivery status, independent of the final Run lifecycle in status. no_result is an empty but valid answer; error means the Provider output could not be delivered.
+             * @enum {string}
+             */
+            result_status: "success" | "no_result" | "error" | "pending";
+            error: {
+                code: string;
+                message: string;
+            } | null;
+            runs: {
+                id: string;
+                /** @description Open this Run in the console. Requires Workspace membership. */
+                run_url: string;
+                provider: string;
+                endpoint: string;
+                endpoint_version: number;
+                /**
+                 * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                 * @enum {string}
+                 */
+                status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                /** @description Why the Run failed. Non-null only when status is FAILED. */
+                failure: {
+                    /** @enum {string} */
+                    kind: "TIMED_OUT" | "INTERNAL";
+                    message: string;
+                } | null;
+                input: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                output: {
+                    /** @enum {boolean} */
+                    omitted: true;
+                };
+                provider_response: {
+                    /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
+                    http_status: number;
+                } | null;
+                /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
+                charge_usd: string | null;
+                /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
+                charge_basis: {
+                    /** @enum {string} */
+                    clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
+                    quantity: number | null;
+                } | null;
+                /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
+                stoppable: boolean;
+                /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
+                stop_requested_at: string | null;
+                /**
+                 * Format: date-time
+                 * @description ISO-8601 UTC timestamp
+                 */
+                created_at: string;
+                started_at: string | null;
+                completed_at: string | null;
+                task_id: string | null;
+                /**
+                 * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                 *
+                 *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                 *     - Values: strings of 1–500 characters.
+                 *     - user_id: your End user's opaque ID, never their email address or name.
+                 */
+                metadata: {
+                    [key: string]: string;
+                };
+            }[];
+            /** @description Authenticated, read-only URL path for polling this normalized result and total charge. Use with the API origin. Does not create Runs or resume fallback. GET /v1/runs/:id still returns the native, individual Run. */
+            result_url: string;
+        };
         EndpointVersionMismatchEncoded: {
             error: {
                 /** @enum {string} */
@@ -438,9 +2247,22 @@ export interface operations {
             content: {
                 "application/json": {
                     action?: ("search" | "news" | "places" | "scholar" | "shopping" | "images" | "videos" | "answer" | "scrape" | "similar") | null;
-                    provider?: ("auto" | "serper" | "serpapi" | "exa" | "dataforseo") | null;
+                    provider?: ("auto" | "serper" | "serpapi" | "exa" | "dataforseo" | "firecrawl") | null;
                     query?: string | null;
                     url?: string | null;
+                    /** @description For scrape only. When omitted, use the selected Provider's native default: text for Serper/Exa, markdown for Firecrawl/DataForSEO. Requested formats guide routing and fallback; output exposes fixed text/markdown/html/raw_html fields. html means cleaned HTML; raw_html means original HTML. Auto uses Serper then Firecrawl. HTML requests go directly to Firecrawl. Read result_status and missing_formats for delivery; an unrequested null field is not a partial result. Firecrawl does not supply text; Glasser does not convert HTML to text. X/Twitter and enrichment routes are excluded from Firecrawl. */
+                    formats?: ("text" | "markdown" | "html" | "raw_html")[];
+                    /** @description For scrape only. Default 30000. Execution budget for this API request, including serial fallback. A retry has a new request window and reuses existing Runs through Run idempotency. Firecrawl and Exa use the actual remaining time, reserving settlement and response time; less than 1 second of call time is refused. */
+                    timeout_ms?: number;
+                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                    max_charge_usd?: string & unknown;
+                    /** @description For scrape only. Maximum Provider cache age; 0 requires a live fetch. Routes without this control are excluded. Auto selects Firecrawl (milliseconds); explicit Exa receives whole hours rounded down. Unknown cache/fetch metadata remains null. */
+                    cache_max_age_seconds?: number;
+                    /**
+                     * @description For search only: restrict results to the past day, week, month, or year using Google's time filter. Omit for any time. Auto uses only Providers that support this filter (Serper and SerpApi). Exa is refused when this field is supplied. This is a search-engine filter, not a verified publication date.
+                     * @enum {string}
+                     */
+                    time_range?: "day" | "week" | "month" | "year";
                     country?: string | null;
                     language?: string | null;
                     limit?: number | null;
@@ -452,100 +2274,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["WebResearchResult"];
                 };
             };
-            /** @description an in-flight run: QUEUED or RUNNING */
+            /** @description Success */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["WebResearchResult"];
                 };
             };
             /** @description ValidationFailed | IdempotencyKeyRequired */
@@ -613,6 +2357,73 @@ export interface operations {
             };
         };
     };
+    "gtm-web-research-result": {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WebResearchResult */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebResearchResult"];
+                };
+            };
+            /** @description ValidationFailed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "gtm-company-intelligence": {
         parameters: {
             query?: never;
@@ -640,100 +2451,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["CompanyIntelligenceResult"];
                 };
             };
-            /** @description an in-flight run: QUEUED or RUNNING */
+            /** @description Success */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["CompanyIntelligenceResult"];
                 };
             };
             /** @description ValidationFailed | IdempotencyKeyRequired */
@@ -797,6 +2530,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ServiceUnavailableEncoded"];
+                };
+            };
+        };
+    };
+    "gtm-company-intelligence-result": {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CompanyIntelligenceResult */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyIntelligenceResult"];
+                };
+            };
+            /** @description ValidationFailed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
                 };
             };
         };
@@ -832,100 +2632,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["PeopleSearchResult"];
                 };
             };
-            /** @description an in-flight run: QUEUED or RUNNING */
+            /** @description Success */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["PeopleSearchResult"];
                 };
             };
             /** @description ValidationFailed | IdempotencyKeyRequired */
@@ -993,6 +2715,73 @@ export interface operations {
             };
         };
     };
+    "gtm-people-search-result": {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PeopleSearchResult */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeopleSearchResult"];
+                };
+            };
+            /** @description ValidationFailed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "gtm-seo-research": {
         parameters: {
             query?: never;
@@ -1005,10 +2794,12 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    action?: ("keyword_overview" | "keyword_ideas" | "serp" | "domain_overview" | "ranked_keywords" | "organic_competitors" | "backlinks_overview" | "backlinks" | "referring_domains" | "domain_rating") | null;
+                    action?: ("keyword_overview" | "keyword_ideas" | "serp" | "domain_overview" | "ranked_keywords" | "organic_competitors" | "backlinks_overview" | "backlinks" | "referring_domains" | "domain_rating" | "site_audit" | "ai_visibility" | "keyword_gap" | "backlink_gap" | "page_audit" | "visibility_history" | "ai_citations") | null;
                     provider?: ("auto" | "semrush" | "serpstat" | "dataforseo" | "ahrefs" | "serper") | null;
                     keywords?: string[] | null;
                     domain?: string | null;
+                    competitors?: string[] | null;
+                    url?: string | null;
                     country?: string | null;
                     limit?: number | null;
                     task_id?: string | null;
@@ -1019,100 +2810,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["SeoResearchResult"];
                 };
             };
-            /** @description an in-flight run: QUEUED or RUNNING */
+            /** @description Success */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["SeoResearchResult"];
                 };
             };
             /** @description ValidationFailed | IdempotencyKeyRequired */
@@ -1176,6 +2889,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ServiceUnavailableEncoded"];
+                };
+            };
+        };
+    };
+    "gtm-seo-research-result": {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SeoResearchResult */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeoResearchResult"];
+                };
+            };
+            /** @description ValidationFailed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
                 };
             };
         };
@@ -1206,100 +2986,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["SocialResearchResult"];
                 };
             };
-            /** @description an in-flight run: QUEUED or RUNNING */
+            /** @description Success */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["SocialResearchResult"];
                 };
             };
             /** @description ValidationFailed | IdempotencyKeyRequired */
@@ -1367,6 +3069,73 @@ export interface operations {
             };
         };
     };
+    "gtm-social-research-result": {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SocialResearchResult */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialResearchResult"];
+                };
+            };
+            /** @description ValidationFailed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "gtm-market-data": {
         parameters: {
             query?: never;
@@ -1380,7 +3149,12 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * @description property_value and property_rent take address. property_search, listings_sale and listings_rental take address, or city plus state, or zip. market_stats takes zip. stock_quote takes symbol.
+                     * @description Choose the data to retrieve:
+                     *
+                     *     - property_value or property_rent: supply address.
+                     *     - property_search, listings_sale, or listings_rental: supply address, city plus state, or zip.
+                     *     - market_stats: supply zip.
+                     *     - stock_quote: supply symbol.
                      * @enum {string}
                      */
                     action: "property_value" | "property_rent" | "property_search" | "listings_sale" | "listings_rental" | "market_stats" | "stock_quote";
@@ -1399,100 +3173,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description a terminal run: COMPLETED, FAILED or STOPPED */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["MarketDataResult"];
                 };
             };
-            /** @description an in-flight run: QUEUED or RUNNING */
+            /** @description Success */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        id: string;
-                        run_url: string;
-                        provider: string;
-                        endpoint: string;
-                        endpoint_version: number;
-                        /** @enum {string} */
-                        status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
-                        failure: {
-                            /** @enum {string} */
-                            kind: "TIMED_OUT" | "INTERNAL";
-                            message: string;
-                        } | null;
-                        input: Record<string, never>;
-                        output: unknown;
-                        provider_response: {
-                            http_status: number;
-                            error?: unknown | null;
-                        } | null;
-                        charge_usd: string | null;
-                        charge_basis: {
-                            /** @enum {string} */
-                            clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
-                            quantity: number | null;
-                        } | null;
-                        stoppable: boolean;
-                        stop_requested_at: string | null;
-                        /**
-                         * Format: date-time
-                         * @description ISO-8601 UTC timestamp
-                         */
-                        created_at: string;
-                        started_at: string | null;
-                        completed_at: string | null;
-                        task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
-                        metadata: {
-                            [key: string]: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["MarketDataResult"];
                 };
             };
             /** @description ValidationFailed | IdempotencyKeyRequired */
@@ -1556,6 +3252,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ServiceUnavailableEncoded"];
+                };
+            };
+        };
+    };
+    "gtm-market-data-result": {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description MarketDataResult */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketDataResult"];
+                };
+            };
+            /** @description ValidationFailed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"] | components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
                 };
             };
         };
@@ -1590,15 +3353,18 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description Endpoint summaries ranked by relevance and filtered by your Key's Policy. Price does not affect ranking. */
                         data: {
                             provider: string;
                             /** @description The Provider's brand name, for display: "People Data Labs" for provider "pdl". Identity stays with `provider` — that is the value run and inspect take, and this one is never sent back. */
                             provider_label: string;
                             endpoint: string;
+                            /** @description Supported Endpoint version. Compatible updates keep this version. */
                             endpoint_version: number;
                             name: string;
                             description: string;
                             tags: string[];
+                            /** @description Current Price and charging rules. Price can change without an Endpoint version change. New Runs use the Price at admission; accepted Runs keep that Price. */
                             price: {
                                 rule: {
                                     /** @enum {string} */
@@ -1632,6 +3398,13 @@ export interface operations {
                                     /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
                                     cap_usd: string;
                                     unit?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "metered";
+                                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                    base_usd: string;
+                                    /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                    cap_usd: string;
                                 } | ({
                                     type: string;
                                 } & {
@@ -1668,6 +3441,7 @@ export interface operations {
                             upgrade_command: string;
                             reason: string;
                         };
+                        /** @description Pass this value as cursor to get the next page. Null means there are no more pages. */
                         next_cursor: string | null;
                         /** @description Total number of ranked candidates across all pages. */
                         total: number;
@@ -1746,10 +3520,12 @@ export interface operations {
                         /** @description The Provider's brand name, for display: "People Data Labs" for provider "pdl". Identity stays with `provider` — that is the value run and inspect take, and this one is never sent back. */
                         provider_label: string;
                         endpoint: string;
+                        /** @description Supported Endpoint version. Compatible updates keep this version. */
                         endpoint_version: number;
                         name: string;
                         description: string;
                         tags: string[];
+                        /** @description Current Price and charging rules. Price can change without an Endpoint version change. New Runs use the Price at admission; accepted Runs keep that Price. */
                         price: {
                             rule: {
                                 /** @enum {string} */
@@ -1783,6 +3559,13 @@ export interface operations {
                                 /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
                                 cap_usd: string;
                                 unit?: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "metered";
+                                /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                base_usd: string;
+                                /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                                cap_usd: string;
                             } | ({
                                 type: string;
                             } & {
@@ -1818,10 +3601,15 @@ export interface operations {
                         };
                         /** @enum {string} */
                         method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD";
+                        /** @description Provider-native JSON Schema for Run input. */
                         input_schema: Record<string, never>;
+                        /** @description JSON Schema for successful output. Null when no reliable schema is available; sample responses do not define a schema. */
                         output_schema: Record<string, never> | null;
+                        /** @description Who defines the output schema: the Provider or Glasser. Null when output_schema is null. */
                         output_schema_source: ("provider" | "glasser") | null;
+                        /** @description Example input. Adjust it to your request and validate it against input_schema. */
                         sample_input: Record<string, never>;
+                        /** @description Link to the Provider's documentation, when available. */
                         doc_url: string | null;
                     };
                 };
@@ -1908,30 +3696,45 @@ export interface operations {
                     "application/json": {
                         data: {
                             id: string;
+                            /** @description Open this Run in the console. Requires Workspace membership. */
                             run_url: string;
                             provider: string;
                             endpoint: string;
                             endpoint_version: number;
-                            /** @enum {string} */
+                            /**
+                             * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                             * @enum {string}
+                             */
                             status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                            /** @description Why the Run failed. Non-null only when status is FAILED. */
                             failure: {
                                 /** @enum {string} */
                                 kind: "TIMED_OUT" | "INTERNAL";
                                 message: string;
                             } | null;
-                            input: Record<string, never>;
-                            output: unknown;
+                            input: {
+                                /** @enum {boolean} */
+                                omitted: true;
+                            };
+                            output: {
+                                /** @enum {boolean} */
+                                omitted: true;
+                            };
                             provider_response: {
+                                /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
                                 http_status: number;
-                                error?: unknown | null;
                             } | null;
+                            /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
                             charge_usd: string | null;
+                            /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
                             charge_basis: {
                                 /** @enum {string} */
                                 clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
                                 quantity: number | null;
                             } | null;
+                            /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
                             stoppable: boolean;
+                            /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
                             stop_requested_at: string | null;
                             /**
                              * Format: date-time
@@ -1941,11 +3744,18 @@ export interface operations {
                             started_at: string | null;
                             completed_at: string | null;
                             task_id: string | null;
-                            /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                            /**
+                             * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                             *
+                             *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                             *     - Values: strings of 1–500 characters.
+                             *     - user_id: your End user's opaque ID, never their email address or name.
+                             */
                             metadata: {
                                 [key: string]: string;
                             };
                         }[];
+                        /** @description Cursor for the next page. Null when there are no more entries. */
                         next_cursor: string | null;
                         client?: {
                             client_version: string | null;
@@ -2009,6 +3819,7 @@ export interface operations {
                 "application/json": {
                     provider: string;
                     endpoint: string;
+                    /** @description Provider-native input. Build it from the input_schema returned by Inspect. */
                     input?: Record<string, never>;
                     endpoint_version?: number | null;
                     task_id?: string | null;
@@ -2027,12 +3838,17 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @description Open this Run in the console. Requires Workspace membership. */
                         run_url: string;
                         provider: string;
                         endpoint: string;
                         endpoint_version: number;
-                        /** @enum {string} */
+                        /**
+                         * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                         * @enum {string}
+                         */
                         status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        /** @description Why the Run failed. Non-null only when status is FAILED. */
                         failure: {
                             /** @enum {string} */
                             kind: "TIMED_OUT" | "INTERNAL";
@@ -2040,17 +3856,30 @@ export interface operations {
                         } | null;
                         input: Record<string, never>;
                         output: unknown;
+                        /**
+                         * @description Non-null only when status is COMPLETED.
+                         *
+                         *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+                         *     - For non-2xx responses, error contains the Provider's error body and output is null.
+                         *
+                         *     Sensitive fields are removed from both bodies.
+                         */
                         provider_response: {
+                            /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
                             http_status: number;
                             error?: unknown | null;
                         } | null;
+                        /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
                         charge_usd: string | null;
+                        /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
                         charge_basis: {
                             /** @enum {string} */
                             clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
                             quantity: number | null;
                         } | null;
+                        /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
                         stoppable: boolean;
+                        /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
                         stop_requested_at: string | null;
                         /**
                          * Format: date-time
@@ -2060,7 +3889,13 @@ export interface operations {
                         started_at: string | null;
                         completed_at: string | null;
                         task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        /**
+                         * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                         *
+                         *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                         *     - Values: strings of 1–500 characters.
+                         *     - user_id: your End user's opaque ID, never their email address or name.
+                         */
                         metadata: {
                             [key: string]: string;
                         };
@@ -2075,12 +3910,17 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @description Open this Run in the console. Requires Workspace membership. */
                         run_url: string;
                         provider: string;
                         endpoint: string;
                         endpoint_version: number;
-                        /** @enum {string} */
+                        /**
+                         * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                         * @enum {string}
+                         */
                         status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        /** @description Why the Run failed. Non-null only when status is FAILED. */
                         failure: {
                             /** @enum {string} */
                             kind: "TIMED_OUT" | "INTERNAL";
@@ -2088,17 +3928,30 @@ export interface operations {
                         } | null;
                         input: Record<string, never>;
                         output: unknown;
+                        /**
+                         * @description Non-null only when status is COMPLETED.
+                         *
+                         *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+                         *     - For non-2xx responses, error contains the Provider's error body and output is null.
+                         *
+                         *     Sensitive fields are removed from both bodies.
+                         */
                         provider_response: {
+                            /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
                             http_status: number;
                             error?: unknown | null;
                         } | null;
+                        /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
                         charge_usd: string | null;
+                        /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
                         charge_basis: {
                             /** @enum {string} */
                             clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
                             quantity: number | null;
                         } | null;
+                        /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
                         stoppable: boolean;
+                        /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
                         stop_requested_at: string | null;
                         /**
                          * Format: date-time
@@ -2108,7 +3961,13 @@ export interface operations {
                         started_at: string | null;
                         completed_at: string | null;
                         task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        /**
+                         * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                         *
+                         *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                         *     - Values: strings of 1–500 characters.
+                         *     - user_id: your End user's opaque ID, never their email address or name.
+                         */
                         metadata: {
                             [key: string]: string;
                         };
@@ -2208,12 +4067,17 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @description Open this Run in the console. Requires Workspace membership. */
                         run_url: string;
                         provider: string;
                         endpoint: string;
                         endpoint_version: number;
-                        /** @enum {string} */
+                        /**
+                         * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                         * @enum {string}
+                         */
                         status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        /** @description Why the Run failed. Non-null only when status is FAILED. */
                         failure: {
                             /** @enum {string} */
                             kind: "TIMED_OUT" | "INTERNAL";
@@ -2221,17 +4085,30 @@ export interface operations {
                         } | null;
                         input: Record<string, never>;
                         output: unknown;
+                        /**
+                         * @description Non-null only when status is COMPLETED.
+                         *
+                         *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+                         *     - For non-2xx responses, error contains the Provider's error body and output is null.
+                         *
+                         *     Sensitive fields are removed from both bodies.
+                         */
                         provider_response: {
+                            /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
                             http_status: number;
                             error?: unknown | null;
                         } | null;
+                        /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
                         charge_usd: string | null;
+                        /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
                         charge_basis: {
                             /** @enum {string} */
                             clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
                             quantity: number | null;
                         } | null;
+                        /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
                         stoppable: boolean;
+                        /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
                         stop_requested_at: string | null;
                         /**
                          * Format: date-time
@@ -2241,7 +4118,13 @@ export interface operations {
                         started_at: string | null;
                         completed_at: string | null;
                         task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        /**
+                         * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                         *
+                         *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                         *     - Values: strings of 1–500 characters.
+                         *     - user_id: your End user's opaque ID, never their email address or name.
+                         */
                         metadata: {
                             [key: string]: string;
                         };
@@ -2314,12 +4197,17 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @description Open this Run in the console. Requires Workspace membership. */
                         run_url: string;
                         provider: string;
                         endpoint: string;
                         endpoint_version: number;
-                        /** @enum {string} */
+                        /**
+                         * @description QUEUED or RUNNING: still in progress. COMPLETED: a Provider response is available, including non-2xx responses. FAILED: read failure. STOPPED: stopped before dispatch. Read charge_usd separately from status.
+                         * @enum {string}
+                         */
                         status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "STOPPED";
+                        /** @description Why the Run failed. Non-null only when status is FAILED. */
                         failure: {
                             /** @enum {string} */
                             kind: "TIMED_OUT" | "INTERNAL";
@@ -2327,17 +4215,30 @@ export interface operations {
                         } | null;
                         input: Record<string, never>;
                         output: unknown;
+                        /**
+                         * @description Non-null only when status is COMPLETED.
+                         *
+                         *     - For 2xx responses, output contains Provider-native JSON (any shape), or null for an empty body.
+                         *     - For non-2xx responses, error contains the Provider's error body and output is null.
+                         *
+                         *     Sensitive fields are removed from both bodies.
+                         */
                         provider_response: {
+                            /** @description HTTP status returned by the Provider. Check this even when the Run is COMPLETED. */
                             http_status: number;
                             error?: unknown | null;
                         } | null;
+                        /** @description Final charge as an exact USD decimal string. Null while QUEUED or RUNNING. A FAILED Run can have a non-zero charge under the Endpoint's Price. */
                         charge_usd: string | null;
+                        /** @description Price clause used to calculate the charge. Null before settlement or when no Provider attempt was made. */
                         charge_basis: {
                             /** @enum {string} */
                             clause: "rule" | "NO_RESULT" | "PROVIDER_ERROR" | "TIMED_OUT" | "INTERNAL";
                             quantity: number | null;
                         } | null;
+                        /** @description Whether a stop request can currently be accepted. This does not guarantee that the Run can stop before dispatch. */
                         stoppable: boolean;
+                        /** @description When a stop was requested. The Run can still continue if dispatch had already started. */
                         stop_requested_at: string | null;
                         /**
                          * Format: date-time
@@ -2347,7 +4248,13 @@ export interface operations {
                         started_at: string | null;
                         completed_at: string | null;
                         task_id: string | null;
-                        /** @description Your own key-value strings for this call, for your records: up to 20 keys (lowercase letters, digits and underscores, starting with a letter, at most 40 characters), string values of 1–500 characters. Glasser stores it, returns it on the Run and lets you filter runs by it; it never goes to a provider and never affects routing, price or idempotency. Put the id of your own end user in user_id. Use an opaque id, never an email address or a name. */
+                        /**
+                         * @description Your stored tracking fields. Use them to filter Runs. They never go to the Provider or affect routing, Price, or idempotency.
+                         *
+                         *     - Up to 20 keys: lowercase letters, digits, and underscores; start with a letter; at most 40 characters.
+                         *     - Values: strings of 1–500 characters.
+                         *     - user_id: your End user's opaque ID, never their email address or name.
+                         */
                         metadata: {
                             [key: string]: string;
                         };
@@ -2426,11 +4333,11 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                        /** @description Settled funds in the Workspace, including funds currently held for Runs. */
                         balance_usd: string;
-                        /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                        /** @description Funds reserved for unfinished Runs. A Hold is not a charge. */
                         held_usd: string;
-                        /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                        /** @description Funds available for new Runs: balance_usd minus held_usd. */
                         available_usd: string;
                         client?: {
                             client_version: string | null;
@@ -2505,8 +4412,9 @@ export interface operations {
                             /** @enum {string} */
                             kind: "charge" | "refund" | "topup" | "grant" | "adjustment";
                             amount_usd: string;
-                            /** @description Exact USD decimal string (min 2, max 6 decimals, one canonical spelling). Sum with decimal arithmetic or scale by 10^6 — never floats. */
+                            /** @description Workspace balance after this entry. */
                             balance_after_usd: string;
+                            /** @description Related Run for a charge or refund; null when no Run is associated. */
                             run_id: string | null;
                             description: string;
                             /**
@@ -2515,6 +4423,7 @@ export interface operations {
                              */
                             created_at: string;
                         }[];
+                        /** @description Cursor for the next page. Null when there are no more entries. */
                         next_cursor: string | null;
                         client?: {
                             client_version: string | null;
