@@ -142,6 +142,39 @@ describe("decodeEndpointDetail", () => {
     expect(maxChargeMicros(detail.price)).toBe(24_036n);
   });
 
+  it("bounds a metered rule by its cap, the most the Provider's reported cost can bill", () => {
+    // Captured with `glasser inspect -j` on 2026-10-23: ranked_keywords v8
+    // moved to metered, and this build refused every keyword lookup.
+    const body = {
+      ...LIVE[0],
+      provider: "dataforseo",
+      endpoint: "/v3/dataforseo_labs/google/ranked_keywords/live",
+      endpoint_version: 8,
+      price: {
+        rule: { type: "metered", base_usd: "0.024", cap_usd: "0.264" },
+        display: {
+          amount_usd: "0.024",
+          unit: "call at the default size, metered by the provider beyond it",
+          cap_usd: "0.264",
+        },
+        charges: {
+          NO_RESULT: "0.012",
+          PROVIDER_ERROR: "0.00",
+          TIMED_OUT: "0.00",
+          INTERNAL: "0.00",
+        },
+      },
+    };
+    const detail = decodeEndpointDetail(body);
+    expect(detail.price.rule.type).toBe("metered");
+    expect(maxChargeMicros(detail.price)).toBe(264_000n);
+    const missingCap = {
+      ...body,
+      price: { ...body.price, rule: { type: "metered", base_usd: "0.024" } },
+    };
+    expect(() => decodeEndpointDetail(missingCap)).toThrow();
+  });
+
   it("rejects a known rule missing its fields, instead of passing it through the open member", () => {
     const body = { ...LIVE[0], price: { ...LIVE[0].price, rule: { type: "flat" } } };
     expect(() => decodeEndpointDetail(body)).toThrow();

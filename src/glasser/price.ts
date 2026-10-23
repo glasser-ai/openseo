@@ -26,7 +26,10 @@ export type KnownPriceRule =
       readonly per_extra_result_usd: string;
       readonly cap_usd: string;
       readonly unit?: string;
-    };
+    }
+  /** Bills the cost the Provider reports, so only the cap bounds a Run: the
+      base is the price at the default request size, not a ceiling. */
+  | { readonly type: "metered"; readonly base_usd: string; readonly cap_usd: string };
 
 /** The contract's open member: a rule added upstream that this build does not
     know. It decodes, so the response stays readable, but its ceiling does not. */
@@ -42,6 +45,7 @@ function known(rule: PriceRule): KnownPriceRule | null {
     case "per_result":
     case "per_token":
     case "base_plus_per_result":
+    case "metered":
       return rule as KnownPriceRule;
     default:
       return null;
@@ -124,6 +128,8 @@ export function priceLine(price: Price): string {
       return `${formatted(r.per_million_input_tokens_usd)}/M tokens (up to ${formatted(r.cap_usd)})`;
     case "base_plus_per_result":
       return `${formatted(r.base_usd)}/run, +${formatted(r.per_extra_result_usd)} per ${r.unit ?? "result"} (up to ${formatted(r.cap_usd)})`;
+    case "metered":
+      return `${formatted(r.base_usd)}/run, metered (up to ${formatted(r.cap_usd)})`;
   }
 }
 
