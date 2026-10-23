@@ -22,6 +22,7 @@ const KNOWN_RULE_TYPES: ReadonlySet<string> = new Set([
   "per_result",
   "per_token",
   "base_plus_per_result",
+  "metered",
 ]);
 
 /** A known `type` must satisfy its own member above. Without this the open
@@ -56,6 +57,7 @@ export const PriceRule = Schema.Union([
     cap_usd: UsdAmount,
     unit: Schema.optionalKey(Schema.String),
   }),
+  Schema.Struct({ type: Schema.Literal("metered"), base_usd: UsdAmount, cap_usd: UsdAmount }),
   Schema.StructWithRest(Schema.Struct({ type: UnknownRuleType }), [
     Schema.Record(Schema.String, Schema.Unknown),
   ]),

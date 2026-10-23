@@ -91,6 +91,9 @@ describe("priceLine", () => {
         charges: {},
       }),
     ).toBe("$1.50/M tokens (up to $0.40)");
+    expect(
+      priceLine({ rule: { type: "metered", base_usd: "0.024", cap_usd: "0.264" }, charges: {} }),
+    ).toBe("$0.024/run, metered (up to $0.264)");
   });
 
   it("prefers the server's own display line, which covers rules this build cannot spell", () => {
