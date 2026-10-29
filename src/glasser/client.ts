@@ -52,6 +52,10 @@ async function call<T>(request: Request, decode: (raw: unknown) => T): Promise<O
     accept: "application/json",
   };
   if (request.body !== undefined) headers["content-type"] = "application/json";
+  // Chrome does not let an extension set its User-Agent, and glasser names the
+  // caller from it, so every OpenSEO request read as "Mozilla". glasser reads
+  // this header first.
+  headers["x-glasser-client"] = clientToken();
   // Required on runs-create; replaying the same key returns the same Run and is
   // not charged twice.
   if (request.idempotencyKey !== undefined) headers["idempotency-key"] = request.idempotencyKey;
@@ -130,8 +134,18 @@ export const inspectEndpoint = (
  * idempotency, so a recovery that resends it replays the original Run.
  */
 function runMetadata(): Record<string, string> {
-  const version = globalThis.chrome?.runtime?.getManifest?.().version;
+  const version = extensionVersion();
   return version ? { client: "openseo", client_version: version } : { client: "openseo" };
+}
+
+function extensionVersion(): string | undefined {
+  return globalThis.chrome?.runtime?.getManifest?.().version;
+}
+
+/** The same name/version shape as a User-Agent product token. */
+function clientToken(): string {
+  const version = extensionVersion();
+  return version ? `openseo/${version}` : "openseo";
 }
 
 export const createRun = (
