@@ -17,10 +17,12 @@ import { AiCitations } from "./AiCitations.jsx";
 import { Meter, MonthlyLine } from "./charts.jsx";
 import { KeywordTable } from "./KeywordTable.jsx";
 import type { Tab } from "./navigation.js";
+import { PageChecks } from "./PageChecks.jsx";
 import { TONE_TEXT } from "./palette.js";
 import { RankedTable } from "./RankedTable.jsx";
 import { Registration } from "./Registration.jsx";
 import { Traffic } from "./Traffic.jsx";
+import { usePage } from "./usePage.js";
 import type { ReportId, ResultState, useReport } from "./useReport.js";
 
 /** Which reports each section shows, and which of them it buys on open. */
@@ -46,6 +48,8 @@ const SECTIONS: Record<Tab, { readonly title: string; readonly ids: readonly Rep
     title: "Overview",
     ids: ["domain-rating", "traffic", "organic-traffic", "backlinks", "ranked-keywords"],
   },
+  // Free and read from the page itself, so it buys nothing; see PageChecks.
+  page: { title: "Page", ids: [] },
   traffic: { title: "Traffic", ids: ["traffic"] },
   // Competitors and top pages cost about $0.013 each at their limit of 10, so
   // they come with the section rather than behind a second click.
@@ -88,6 +92,7 @@ export function Report({
 }) {
   const { results, run } = report;
   const ids = SECTIONS[tab].ids;
+  const page = usePage(tab === "page");
 
   const overviewLong = useLongWait(ids.some((id) => results[id]?.running === true));
 
@@ -217,7 +222,8 @@ export function Report({
 
   return (
     <div className="flex flex-col gap-4 py-4">
-      {!hasKey && <ConnectKey onSettings={onSettings} />}
+      {tab === "page" && <PageChecks scan={page} />}
+      {!hasKey && ids.length > 0 && <ConnectKey onSettings={onSettings} />}
       {ids.some(byMarket) && <MarketPicker market={market} onMarket={onMarket} />}
       {ids.map((id) => (
         <Panel

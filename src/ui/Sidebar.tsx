@@ -3,6 +3,8 @@ import { TAB_LABEL, TABS, type Tab } from "./navigation.js";
 /** One outlined icon per section, on a 16px grid, in one style — no emoji. */
 const ICON: Record<Tab, string> = {
   overview: "M2.5 8.5 8 3l5.5 5.5M4 7.5V13h8V7.5",
+  // A sheet with a folded corner: the one page open in the tab.
+  page: "M4 1.5h5.5L12.5 4.5v10h-8.5ZM9.5 1.5v3h3M6.5 8h4M6.5 10.5h4",
   traffic: "M2.5 11.5 6 8l2.5 2.5L13.5 5M13.5 5H10M13.5 5v3.5",
   search: "M7.2 12a4.8 4.8 0 1 0 0-9.6 4.8 4.8 0 0 0 0 9.6ZM10.7 10.7 14 14",
   backlinks:

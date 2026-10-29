@@ -1,3 +1,4 @@
+import { scanPage } from "../src/domain/page.js";
 import { persistRecoveredPanel } from "../src/domain/persist.js";
 import { lookupRegistration } from "../src/domain/rdap.js";
 import {
@@ -104,6 +105,30 @@ export default defineBackground(() => {
       } else {
         sendResponse(null);
       }
+      return true;
+    }
+    // The Page checks. The scan runs only in the tab that holds
+    // this panel, under the activeTab grant from the gesture that opened it,
+    // and reads only the facts PageFacts lists.
+    if (payload.type === "openseo:page") {
+      const tabId = panelTabId(sender);
+      if (tabId === null) {
+        sendResponse({ kind: "failed", reason: "This panel has no page." });
+        return false;
+      }
+      chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, func: scanPage }).then(
+        ([frame]) =>
+          sendResponse(
+            frame?.result
+              ? { kind: "ok", facts: frame.result }
+              : { kind: "failed", reason: "The page gave no answer." },
+          ),
+        () =>
+          sendResponse({
+            kind: "failed",
+            reason: "Chrome did not let OpenSEO read this page. Reopen the panel and try again.",
+          }),
+      );
       return true;
     }
     // Domain data for the panel. All of it runs in the worker, so the Key and the

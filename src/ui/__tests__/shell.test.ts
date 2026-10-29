@@ -91,8 +91,8 @@ it("moves report navigation focus without activating a paid report", async () =>
     overview.focus();
     overview.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
   });
-  expect(document.activeElement?.id).toBe("tab-traffic");
+  expect(document.activeElement?.id).toBe("tab-page");
   expect(overview.getAttribute("aria-current")).toBe("page");
   expect(send.mock.calls).toHaveLength(before);
-  expect(container.querySelector("#tab-traffic")?.textContent).toBe("Traffic");
+  expect(container.querySelector("#tab-page")?.textContent).toBe("Page");
 });

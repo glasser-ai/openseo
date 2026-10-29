@@ -1,13 +1,14 @@
 # OpenSEO
 
-Open-source Chrome extension for traffic, keywords, backlinks and domain registration,
-powered by [glasser](https://glasser.ai).
+Open-source Chrome extension for page checks, traffic, keywords, backlinks and domain
+registration, powered by [glasser](https://glasser.ai).
 
 [**Install from the Chrome Web Store**](https://chromewebstore.google.com/detail/openseo/egmioohncebomfkepifnhcpddmhoceec)
 
 | Report | Source |
 | --- | --- |
 | Domain registration | Public RDAP registries (free) |
+| Page | The open page and the site's robots.txt (free): indexing, title, description, headings, alt text, structured data |
 | Traffic | Similarweb through Apify |
 | Search | DataForSEO, with competitors and top pages; Semrush for the 12-month trend |
 | AI search | Ahrefs AI citation counts |
@@ -20,8 +21,8 @@ powered by [glasser](https://glasser.ai).
 2. Open a website and select OpenSEO, or press `Alt+D`.
 3. Connect a [glasser Key](https://app.glasser.ai/keys?utm_source=openseo&utm_medium=readme&utm_campaign=onboarding&utm_content=store) in Settings.
 
-Chrome updates the extension itself. Domain registration works straight away; the other
-reports need a Key.
+Chrome updates the extension itself. Domain registration and Page work straight away; the
+other reports need a Key.
 
 <details>
 <summary>Install from a release archive instead</summary>
@@ -46,7 +47,7 @@ is a section of five, so opening the panel on a domain with nothing saved fetche
 **$0.06**; reopening it within the 7 days costs nothing. The default $5/day covers roughly 80 new
 domains. AI search citations cost **$0.13** and the Site section about **$0.02**; each is fetched
 only when that section is opened. The Search section adds competitors and top pages, about
-**$0.03** together.
+**$0.03** together. The Page section is free.
 
 Search reads Google in all countries each time the panel opens. To see one country, select it in **Google search
 in** at the top of the Search section. Search competitors and the 12-month traffic history have

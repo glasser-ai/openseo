@@ -25,6 +25,7 @@ beforeEach(() => {
     if (message.type === "openseo:settings") return { ok: true };
     if (message.type === "openseo:peek") return message.lookup === "domain-rating" ? saved : null;
     if (message.type === "openseo:peek-traffic") return null;
+    if (message.type === "openseo:page") return { kind: "ok", facts: pageFacts };
     if (message.type === "openseo:lookup")
       return new Promise((resolve) => {
         resolveRun = resolve;
@@ -50,6 +51,27 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
 });
+const pageFacts = {
+  url: "https://example.com/",
+  title: "Example: a title long enough for the check",
+  description: null,
+  canonical: "https://example.com/",
+  metaRobots: "",
+  lang: "en",
+  viewport: true,
+  h1: ["Example"],
+  h2: 2,
+  h3: 0,
+  images: 0,
+  imagesWithoutAlt: 0,
+  words: 120,
+  hreflang: 0,
+  schemaTypes: [],
+  ogTitle: false,
+  ogImage: false,
+  robots: { kind: "found", text: "User-agent: GPTBot\nDisallow: /\n" },
+};
+
 /** Use the same report state owner as the panel. */
 const onMarket = vi.fn();
 function Harness(props: { domain: string; hasKey: boolean; tab: Tab }) {
@@ -417,4 +439,23 @@ it("starts Search on all countries and sends the market with each lookup", async
 it("has no country picker on sections that do not depend on it", async () => {
   await render(true, "backlinks");
   expect(container.querySelector("select")).toBeNull();
+});
+
+/* The Page section reads the page, not a Provider: free, with no Key, and
+   nothing bought. */
+it("shows page checks without a Key and buys nothing", async () => {
+  await render(false, "page");
+  const text = container.textContent ?? "";
+  expect(text).toContain("Indexable");
+  expect(text).toContain("Description");
+  expect(text).not.toContain("Add your glasser Key");
+  expect(send.mock.calls.filter(([message]) => message.type === "openseo:page")).toHaveLength(1);
+  expect(send.mock.calls.some(([message]) => /^openseo:(lookup|traffic)$/.test(message.type))).toBe(
+    false,
+  );
+});
+
+it("does not read the page for sections that do not need it", async () => {
+  await render(true, "backlinks");
+  expect(send.mock.calls.some(([message]) => message.type === "openseo:page")).toBe(false);
 });
