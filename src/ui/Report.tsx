@@ -14,6 +14,7 @@ import { type Metric, type Tone, toneOf } from "../domain/thresholds.js";
 import { compact, parseCompact } from "../domain/traffic.js";
 import { formatUsd, usdToMicros } from "../ledger/micros.js";
 import { AiCitations } from "./AiCitations.jsx";
+import { AiCrawlers } from "./AiCrawlers.jsx";
 import { Meter, MonthlyLine } from "./charts.jsx";
 import { KeywordTable } from "./KeywordTable.jsx";
 import type { Tab } from "./navigation.js";
@@ -92,7 +93,7 @@ export function Report({
 }) {
   const { results, run } = report;
   const ids = SECTIONS[tab].ids;
-  const page = usePage(tab === "page");
+  const page = usePage(tab === "page" || tab === "ai");
 
   const overviewLong = useLongWait(ids.some((id) => results[id]?.running === true));
 
@@ -222,7 +223,9 @@ export function Report({
 
   return (
     <div className="flex flex-col gap-4 py-4">
+      {/* Free cards first: they need no Key, so the Key prompt goes under them. */}
       {tab === "page" && <PageChecks scan={page} />}
+      {tab === "ai" && <AiCrawlers scan={page} />}
       {!hasKey && ids.length > 0 && <ConnectKey onSettings={onSettings} />}
       {ids.some(byMarket) && <MarketPicker market={market} onMarket={onMarket} />}
       {ids.map((id) => (

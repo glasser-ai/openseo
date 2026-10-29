@@ -3,7 +3,7 @@
 OpenSEO does not upload page HTML, page text, cookies or form contents. It uses the current
 tab's hostname for domain reports. It does not scan Google or Bing search results.
 
-When you open the Page section, OpenSEO reads these facts from the open page: the
+When you open the Page or AI search section, OpenSEO reads these facts from the open page: the
 title, meta description, canonical link, robots meta tags, `lang` attribute, viewport tag,
 up to five H1 texts, H2 and H3 counts, image and missing-alt counts, word count, hreflang count,
 structured-data types and whether Open Graph title and image tags exist. The page also requests
@@ -15,7 +15,7 @@ glasser or any other service.
 | Destination | Purpose and data sent |
 | --- | --- |
 | `api.glasser.ai` | Key validation and balance checks; endpoint descriptions and prices; paid Runs and recovery. Requests use your glasser Key as a Bearer credential. Paid requests include the selected domain, the country chosen for Search, when one is chosen, and endpoint parameters. Each Run also carries a tag that names OpenSEO and its version, so glasser can tell OpenSEO's requests from other requests made with the same Key. The tag holds no page, domain or user data. Recovery uses a Run ID or the original request and idempotency key. |
-| The open site | `/robots.txt`, requested from the page itself when the Page section opens. It is a normal same-site request without cookies, and no glasser Key is sent. |
+| The open site | `/robots.txt`, requested from the page itself when the Page or AI search section opens. It is a normal same-site request without cookies, and no glasser Key is sent. |
 | `data.iana.org/rdap/dns.json` | Public registry discovery. The list is cached for seven days. No glasser Key is sent. |
 | The RDAP registry selected from IANA's list | Registration dates for the registrable domain, such as `example.com` for `docs.example.com`. Results are cached for thirty days. No glasser Key is sent. Registries without a usable public CORS endpoint may be unavailable. |
 
@@ -51,7 +51,7 @@ can remain stored after their freshness period ends; expiry controls reuse, not 
 
 | Permission | Purpose |
 | --- | --- |
-| `activeTab` and `scripting` | Read the selected tab address and insert the report after a toolbar, shortcut or context-menu action. The insertion script creates the report container and reads nothing. The Page section runs a second script in the same tab that reads only the facts listed above. |
+| `activeTab` and `scripting` | Read the selected tab address and insert the report after a toolbar, shortcut or context-menu action. The insertion script creates the report container and reads nothing. The Page and AI search sections run a second script in the same tab that reads only the facts listed above. |
 | `storage` | Store settings, Key, results and the local ledger. |
 | `contextMenus` | Provide right-click actions. |
 | `alarms` | Recover unfinished paid requests after worker suspension. |

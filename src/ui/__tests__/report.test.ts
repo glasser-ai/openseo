@@ -455,6 +455,18 @@ it("shows page checks without a Key and buys nothing", async () => {
   );
 });
 
+it("puts AI crawler access above the citations", async () => {
+  await render(true, "ai");
+  const text = container.textContent ?? "";
+  expect(text).toContain("AI crawler access");
+  expect(text).toContain("5/6Training crawlers allowed");
+  expect(text.indexOf("AI crawler access")).toBeLessThan(text.indexOf("AI search citations"));
+  const gpt = [...container.querySelectorAll("tr")].find((row) =>
+    row.textContent?.startsWith("GPTBot"),
+  );
+  expect(gpt?.textContent).toContain("Blocked");
+});
+
 it("does not read the page for sections that do not need it", async () => {
   await render(true, "backlinks");
   expect(send.mock.calls.some(([message]) => message.type === "openseo:page")).toBe(false);

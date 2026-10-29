@@ -93,6 +93,28 @@ function matches(pattern: string, path: string): boolean {
   return new RegExp(`^${source}${anchored ? "$" : ""}`).test(path);
 }
 
+export type Crawler = {
+  readonly token: string;
+  readonly owner: string;
+  /** "answers" crawlers fetch pages to cite them in AI answers; "training"
+      ones collect text to train models. Blocking one does not block the other. */
+  readonly use: "answers" | "training";
+};
+
+/** Tokens as each company documents them. Google-Extended is a robots.txt
+    token only: Googlebot does the fetching, and the token decides Gemini use. */
+export const AI_CRAWLERS: readonly Crawler[] = [
+  { token: "OAI-SearchBot", owner: "OpenAI", use: "answers" },
+  { token: "Claude-SearchBot", owner: "Anthropic", use: "answers" },
+  { token: "PerplexityBot", owner: "Perplexity", use: "answers" },
+  { token: "GPTBot", owner: "OpenAI", use: "training" },
+  { token: "ClaudeBot", owner: "Anthropic", use: "training" },
+  { token: "Google-Extended", owner: "Google", use: "training" },
+  { token: "Applebot-Extended", owner: "Apple", use: "training" },
+  { token: "Meta-ExternalAgent", owner: "Meta", use: "training" },
+  { token: "CCBot", owner: "Common Crawl", use: "training" },
+];
+
 /** What the scan found at /robots.txt. Google reads a 4xx as "no rules" and
     stops crawling on a 5xx or a 429, so the two are kept apart. */
 export type RobotsFile =

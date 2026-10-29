@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { isAllowed, parseRobots, robotsFor } from "../robots.js";
+import { AI_CRAWLERS, isAllowed, parseRobots, robotsFor } from "../robots.js";
 
 it("lets the longest rule decide, and Allow win a tie", () => {
   const robots = parseRobots(`
@@ -63,4 +63,8 @@ it("allows all for a missing file and gives no answer for an unreadable one", ()
   const missing = robotsFor({ kind: "missing", status: 404 });
   expect(missing && isAllowed(missing, "GPTBot", "/")).toBe(true);
   expect(robotsFor({ kind: "unreadable", reason: "HTTP 503" })).toBeNull();
+});
+
+it("names each AI crawler once", () => {
+  expect(new Set(AI_CRAWLERS.map((crawler) => crawler.token)).size).toBe(AI_CRAWLERS.length);
 });

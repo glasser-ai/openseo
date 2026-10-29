@@ -107,7 +107,7 @@ export default defineBackground(() => {
       }
       return true;
     }
-    // The Page checks. The scan runs only in the tab that holds
+    // The Page and AI search checks. The scan runs only in the tab that holds
     // this panel, under the activeTab grant from the gesture that opened it,
     // and reads only the facts PageFacts lists.
     if (payload.type === "openseo:page") {
