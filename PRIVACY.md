@@ -7,7 +7,7 @@ tab's hostname for domain reports. It does not scan Google or Bing search result
 
 | Destination | Purpose and data sent |
 | --- | --- |
-| `api.glasser.ai` | Key validation and balance checks; endpoint descriptions and prices; paid Runs and recovery. Requests use your glasser Key as a Bearer credential. Paid requests include the selected domain and endpoint parameters. Recovery uses a Run ID or the original request and idempotency key. |
+| `api.glasser.ai` | Key validation and balance checks; endpoint descriptions and prices; paid Runs and recovery. Requests use your glasser Key as a Bearer credential. Paid requests include the selected domain and endpoint parameters. Each Run also carries a tag that names OpenSEO and its version, so glasser can tell OpenSEO's requests from other requests made with the same Key. The tag holds no page, domain or user data. Recovery uses a Run ID or the original request and idempotency key. |
 | `data.iana.org/rdap/dns.json` | Public registry discovery. The list is cached for seven days. No glasser Key is sent. |
 | The RDAP registry selected from IANA's list | Registration dates for the registrable domain, such as `example.com` for `docs.example.com`. Results are cached for thirty days. No glasser Key is sent. Registries without a usable public CORS endpoint may be unavailable. |
 

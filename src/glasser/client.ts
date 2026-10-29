@@ -123,6 +123,17 @@ export const inspectEndpoint = (
     decodeEndpointDetail,
   );
 
+/**
+ * Marks each Run as OpenSEO's, so glasser can tell which reports people use.
+ * Without it OpenSEO's Runs read the same as any other caller's with the Key.
+ * Metadata never reaches the Provider and does not change price or
+ * idempotency, so a recovery that resends it replays the original Run.
+ */
+function runMetadata(): Record<string, string> {
+  const version = globalThis.chrome?.runtime?.getManifest?.().version;
+  return version ? { client: "openseo", client_version: version } : { client: "openseo" };
+}
+
 export const createRun = (
   key: string,
   idempotencyKey: string,
@@ -130,7 +141,14 @@ export const createRun = (
   signal?: AbortSignal,
 ): Promise<Outcome<Run>> =>
   call(
-    { path: "/v1/runs", method: "POST", key, body, idempotencyKey, ...(signal ? { signal } : {}) },
+    {
+      path: "/v1/runs",
+      method: "POST",
+      key,
+      body: { ...body, metadata: runMetadata() },
+      idempotencyKey,
+      ...(signal ? { signal } : {}),
+    },
     decodeRun,
   );
 
