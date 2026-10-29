@@ -18,6 +18,7 @@ export const REPORT_TITLE = {
   "traffic-history": "Search traffic, 12 months",
   competitors: "Search competitors",
   "top-pages": "Top pages",
+  "page-keywords": "This page's keywords",
   "ai-citations": "AI search citations",
   company: "Company",
   technologies: "Technologies",
@@ -31,6 +32,7 @@ export type LookupId =
   | "traffic-history"
   | "competitors"
   | "top-pages"
+  | "page-keywords"
   | "ai-citations"
   | "company"
   | "technologies";
@@ -90,6 +92,9 @@ export type Lookup = {
   /** The Provider answers for all countries at once. Without it, all
       countries reads one fallback country (see countryOf). */
   readonly worldwide?: boolean;
+  /** "page" lookups take the open page's URL where the rest take the domain,
+      so each page is its own request and cache entry. */
+  readonly subject?: "domain" | "page";
   readonly extractKeywords?: (output: unknown) => readonly KeywordRow[];
   /** A month-by-month series drawn under the figures, oldest first. */
   readonly extractSeries?: (output: unknown) => readonly SeriesPoint[];
@@ -302,6 +307,34 @@ export const LOOKUPS: readonly Lookup[] = [
       extractPages(output).map((row) => ({
         label: row.name,
         value: `${compact(row.visits)} visits / month`,
+      })),
+  },
+  {
+    id: "page-keywords",
+    title: "This page's keywords",
+    blurb:
+      "Keywords the open page itself ranks for in Google, with position, monthly volume and estimated visits.",
+    provider: "dataforseo",
+    endpoint: "/v3/dataforseo_labs/google/ranked_keywords/live",
+    attribution: { label: "Data by DataForSEO", href: "https://dataforseo.com/" },
+    byMarket: true,
+    worldwide: true,
+    subject: "page",
+    /**
+     * Measured 2026-10-29: a full URL as the target, with no location, gave
+     * 1,183 keywords for one anthropic.com post at $0.015 for 25 rows. The
+     * target must keep its scheme; the same call takes a bare domain for the
+     * whole site.
+     */
+    buildInput: (url, market) => ({ target: url, ...placeOf(market), limit: 25 }),
+    extractKeywords: extractKeywords,
+    extract: (output) =>
+      extractKeywords(output).map((row) => ({
+        label: row.keyword,
+        value:
+          row.monthlyVolume === null
+            ? `#${row.position}`
+            : `#${row.position} · ${compact(row.monthlyVolume)}/mo`,
       })),
   },
   {

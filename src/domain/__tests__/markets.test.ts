@@ -182,7 +182,7 @@ it("shows each keyword once, for its best country, without a sum", () => {
       },
     ],
   });
-  expect(lookup("ranked-keywords").extractKeywords?.(answer(null))).toEqual([
+  expect(lookup("page-keywords").extractKeywords?.(answer(null))).toEqual([
     {
       keyword: "anthropic ai assistant",
       position: 2,
@@ -196,4 +196,8 @@ it("shows each keyword once, for its best country, without a sum", () => {
   expect(lookup("ranked-keywords").extractKeywords?.(answer(2840))?.[0]).not.toHaveProperty(
     "country",
   );
+  expect(lookup("page-keywords").buildInput("https://example.com/a", WORLDWIDE)).toEqual({
+    target: "https://example.com/a",
+    limit: 25,
+  });
 });

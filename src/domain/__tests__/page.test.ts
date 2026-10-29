@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { indexing, onPage, type PageFacts, scanPage } from "../page.js";
+import { indexing, lookupTarget, onPage, type PageFacts, scanPage } from "../page.js";
 
 afterEach(() => {
   document.head.innerHTML = "";
@@ -144,4 +144,40 @@ it("bands on-page lengths as rules of thumb", () => {
   expect(poor.Language?.tone).toBe("warn");
   expect(poor["Mobile viewport"]?.tone).toBe("warn");
   expect(poor["Social preview"]).toMatchObject({ value: "No image", tone: "warn" });
+});
+
+/* Review: dropping the whole query bought the home page for /?p=123. */
+it("asks about the canonical, or the path, and never a private query string", () => {
+  expect(lookupTarget(facts({ canonical: "https://example.com/?p=123#top" }))).toEqual({
+    kind: "ok",
+    url: "https://example.com/?p=123",
+  });
+  expect(
+    lookupTarget(
+      facts({ url: "https://example.com/post?utm_source=x&gclid=1#a", canonical: null }),
+    ),
+  ).toEqual({ kind: "ok", url: "https://example.com/post" });
+  expect(
+    lookupTarget(facts({ url: "https://example.com/?p=123&token=abc", canonical: null })).kind,
+  ).toBe("unsupported");
+});
+
+/* Review: the canonical skipped the cleanup, so credentials reached the
+   Provider and each campaign tag bought the same page again. */
+it("sends no credentials or tracking tags from the canonical", () => {
+  expect(
+    lookupTarget(
+      facts({
+        canonical: "https://user:secret@example.com/article?utm_source=news&mc_eid=123&p=7#top",
+      }),
+    ),
+  ).toEqual({ kind: "ok", url: "https://example.com/article?p=7" });
+  expect(lookupTarget(facts({ canonical: "https://example.com/article?utm_source=news" }))).toEqual(
+    { kind: "ok", url: "https://example.com/article" },
+  );
+  // A clean query keeps its own spelling, so its cache identity does not change.
+  expect(lookupTarget(facts({ canonical: "https://example.com/?q=a%20b" }))).toEqual({
+    kind: "ok",
+    url: "https://example.com/?q=a%20b",
+  });
 });

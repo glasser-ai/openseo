@@ -8,7 +8,7 @@ registration, powered by [glasser](https://glasser.ai).
 | Report | Source |
 | --- | --- |
 | Domain registration | Public RDAP registries (free) |
-| Page | The open page and the site's robots.txt (free): indexing, title, description, headings, alt text, structured data |
+| Page | The open page and the site's robots.txt (free): indexing, title, description, headings, alt text, structured data; DataForSEO for the keywords the page ranks for |
 | Traffic | Similarweb through Apify |
 | Search | DataForSEO, with competitors and top pages; Semrush for the 12-month trend |
 | AI search | The site's robots.txt for AI crawler access (free); Ahrefs AI citation counts |
@@ -47,7 +47,8 @@ is a section of five, so opening the panel on a domain with nothing saved fetche
 **$0.06**; reopening it within the 7 days costs nothing. The default $5/day covers roughly 80 new
 domains. AI search citations cost **$0.13** and the Site section about **$0.02**; each is fetched
 only when that section is opened. The Search section adds competitors and top pages, about
-**$0.03** together. The Page section's checks and AI crawler access are free.
+**$0.03** together. The Page section's checks and AI crawler access are free; the keywords
+the open page ranks for cost about **$0.015** per page.
 
 Search reads Google in all countries each time the panel opens. To see one country, select it in **Google search
 in** at the top of the Search section. Search competitors and the 12-month traffic history have

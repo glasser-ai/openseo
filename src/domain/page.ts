@@ -290,6 +290,59 @@ export function onPage(facts: PageFacts): readonly Check[] {
   ];
 }
 
+export type PageTarget =
+  | { readonly kind: "ok"; readonly url: string }
+  | { readonly kind: "unsupported"; readonly reason: string };
+
+/** Query parameters that track a visit and never change the page. */
+const TRACKING = /^(utm_.+|gclid|gbraid|wbraid|fbclid|msclkid|mc_cid|mc_eid|_ga|_gl)$/i;
+
+/**
+ * The address the paid keyword lookup asks about, taken from the scan so the
+ * checks and the keywords always describe one page.
+ *
+ * The canonical comes first: it is the page Google ranks, and the site
+ * publishes it. Without one, a query string that is left after the tracking
+ * parameters, such as ?p=123, can name a different page or hold a session
+ * token or an email address, so nothing is bought rather than the wrong page,
+ * or a private value sent to a Provider.
+ */
+export function lookupTarget(facts: PageFacts): PageTarget {
+  const web = (url: URL) => url.protocol === "https:" || url.protocol === "http:";
+  // A canonical is the site's own text, so it can hold credentials or a
+  // campaign tag too. Neither is sent, and a tag must not split the cache into
+  // one paid lookup per campaign.
+  const clean = (url: URL) => {
+    url.hash = "";
+    url.username = "";
+    url.password = "";
+    const keys = [...url.searchParams.keys()];
+    // Only rewrite the query when there is something to drop: URLSearchParams
+    // re-encodes it, which would change the cache identity of a clean address.
+    if (keys.some((key) => TRACKING.test(key)))
+      for (const key of keys) if (TRACKING.test(key)) url.searchParams.delete(key);
+    return url;
+  };
+  try {
+    if (facts.canonical) {
+      const canonical = new URL(facts.canonical);
+      if (web(canonical)) return { kind: "ok", url: clean(canonical).href };
+    }
+    const url = new URL(facts.url);
+    if (!web(url)) return { kind: "unsupported", reason: "This is not a web page." };
+    if (clean(url).search !== "") {
+      return {
+        kind: "unsupported",
+        reason:
+          "This address has a query string and the page names no canonical address, so OpenSEO cannot tell which page to look up. The query string can hold private data, so it is not sent.",
+      };
+    }
+    return { kind: "ok", url: url.origin + url.pathname };
+  } catch {
+    return { kind: "unsupported", reason: "The page address could not be read." };
+  }
+}
+
 /** robots.txt rules match the path and query, never the host or fragment. */
 export function pathOf(url: string): string {
   try {

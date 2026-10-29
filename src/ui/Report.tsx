@@ -10,6 +10,7 @@ import {
   type SeriesPoint,
 } from "../domain/lookups.js";
 import { MARKETS, type Market } from "../domain/markets.js";
+import { type PageTarget, pathOf } from "../domain/page.js";
 import { type Metric, type Tone, toneOf } from "../domain/thresholds.js";
 import { compact, parseCompact } from "../domain/traffic.js";
 import { formatUsd, usdToMicros } from "../ledger/micros.js";
@@ -23,7 +24,7 @@ import { TONE_TEXT } from "./palette.js";
 import { RankedTable } from "./RankedTable.jsx";
 import { Registration } from "./Registration.jsx";
 import { Traffic } from "./Traffic.jsx";
-import { usePage } from "./usePage.js";
+import type { PageScan } from "./usePage.js";
 import type { ReportId, ResultState, useReport } from "./useReport.js";
 
 /** Which reports each section shows, and which of them it buys on open. */
@@ -49,8 +50,9 @@ const SECTIONS: Record<Tab, { readonly title: string; readonly ids: readonly Rep
     title: "Overview",
     ids: ["domain-rating", "traffic", "organic-traffic", "backlinks", "ranked-keywords"],
   },
-  // Free and read from the page itself, so it buys nothing; see PageChecks.
-  page: { title: "Page", ids: [] },
+  // The checks are free and read from the page itself (see PageChecks); the
+  // page's keywords cost about $0.015 and come with the section.
+  page: { title: "Page", ids: ["page-keywords"] },
   traffic: { title: "Traffic", ids: ["traffic"] },
   // Competitors and top pages cost about $0.013 each at their limit of 10, so
   // they come with the section rather than behind a second click.
@@ -76,6 +78,9 @@ export function Report({
   onTab,
   onSettings,
   report,
+  scan,
+  fresh,
+  target,
 }: {
   readonly domain: string;
   readonly hasKey: boolean;
@@ -90,10 +95,18 @@ export function Report({
   readonly onSettings: () => void;
   /** Keep requests alive while Settings is open. */
   readonly report: ReturnType<typeof useReport>;
+  /** The read of the open page, owned above the tabs with the report state. */
+  readonly scan: PageScan;
+  /** The scan was read on this visit to the section; see usePage. */
+  readonly fresh: boolean;
+  readonly target: PageTarget | null;
 }) {
   const { results, run } = report;
   const ids = SECTIONS[tab].ids;
-  const page = usePage(tab === "page" || tab === "ai");
+  // The page's keywords wait for the scan's address, and are not bought for a
+  // page that has none (see lookupTarget).
+  const page = target?.kind === "ok" ? target.url : "";
+  const shown = ids.filter((id) => !PAGE_IDS.has(id) || page !== "");
 
   const overviewLong = useLongWait(ids.some((id) => results[id]?.running === true));
 
@@ -105,11 +118,16 @@ export function Report({
     for (const id of ids) {
       const state = results[id];
       if (!state || state.loading || state.running || state.error) continue;
+      // The tab can show a new page while the last scan still names the old
+      // one; buy nothing until the scan is read again.
+      if (PAGE_IDS.has(id) && !fresh) continue;
       // An outdated cache counts as none: the panel renders readStoredPanel,
       // which ignores the TTL, so the check has to happen here or that copy
       // hangs around and never refreshes.
       if (state.entry !== null && !isOutdated(state.entry)) continue;
-      const gate = `${domain}:${id}`;
+      // A page lookup is gated per page, so a new scan of a new address buys
+      // that page once too.
+      const gate = PAGE_IDS.has(id) ? `${page}:${id}` : `${domain}:${id}`;
       if (fired.current.has(gate)) continue;
       fired.current.add(gate);
       void run(id);
@@ -224,24 +242,40 @@ export function Report({
   return (
     <div className="flex flex-col gap-4 py-4">
       {/* Free cards first: they need no Key, so the Key prompt goes under them. */}
-      {tab === "page" && <PageChecks scan={page} />}
-      {tab === "ai" && <AiCrawlers scan={page} />}
-      {!hasKey && ids.length > 0 && <ConnectKey onSettings={onSettings} />}
+      {tab === "page" && <PageChecks scan={scan} />}
+      {tab === "ai" && <AiCrawlers scan={scan} />}
+      {!hasKey && <ConnectKey onSettings={onSettings} />}
       {ids.some(byMarket) && <MarketPicker market={market} onMarket={onMarket} />}
-      {ids.map((id) => (
+      {tab === "page" && target?.kind === "unsupported" && (
+        <section className="report-card">
+          <h2 className="text-section font-semibold tracking-tight">{TITLE["page-keywords"]}</h2>
+          <p className="mt-2 text-muted-foreground">{target.reason}</p>
+        </section>
+      )}
+      {shown.map((id) => (
         <Panel
           key={id}
           id={id}
           domain={domain}
-          market={marketLabel(id, market)}
+          market={
+            PAGE_IDS.has(id)
+              ? `${pathOf(page)} · ${marketLabel(id, market)}`
+              : marketLabel(id, market)
+          }
           hasKey={hasKey}
           state={results[id]}
-          onRun={() => void run(id, true)}
+          onRun={() => {
+            if (!PAGE_IDS.has(id) || fresh) void run(id, true);
+          }}
         />
       ))}
     </div>
   );
 }
+
+const PAGE_IDS = new Set<ReportId>(
+  LOOKUPS.filter((lookup) => lookup.subject === "page").map((lookup) => lookup.id),
+);
 
 const lookupOf = (id: ReportId) => LOOKUPS.find((lookup) => lookup.id === (id as LookupId));
 
@@ -326,6 +360,7 @@ const TAB_OF: Record<ReportId, Tab> = {
   "traffic-history": "search",
   competitors: "search",
   "top-pages": "search",
+  "page-keywords": "page",
   "ai-citations": "ai",
   company: "site",
   technologies: "site",
@@ -367,7 +402,7 @@ function headline(id: ReportId, state: ResultState | undefined, hasKey: boolean)
      * subjectless `#2 · 50/mo` on the overview. This cell wants one sentence
      * about the whole table, so it takes the best position.
      */
-    if (id === "ranked-keywords") {
+    if (id === "ranked-keywords" || id === "page-keywords") {
       const best = bestPosition(payload.fields, payload.keywords);
       return {
         label: "Best keyword position",
@@ -721,7 +756,7 @@ function Panel({
         // as 25 KPI-sized figures (with the keyword itself shrunk to a caption)
         // and then repeat them as a table below — the same data drawn twice, the
         // first time in the typography reserved for lead figures.
-        id === "ranked-keywords" ? (
+        id === "ranked-keywords" || id === "page-keywords" ? (
           <KeywordTable
             rows={payload.fields}
             {...(payload.keywords ? { keywords: payload.keywords } : {})}

@@ -24,8 +24,14 @@ const initial = (): Record<ReportId, ResultState> =>
     ]),
   ) as Record<ReportId, ResultState>;
 
+/** The target each lookup is asked about: the domain, or for page lookups the
+    open page's URL. */
+const PAGE_IDS = new Set<ReportId>(
+  LOOKUPS.filter((lookup) => lookup.subject === "page").map((lookup) => lookup.id),
+);
+
 /** Own result state above the tabs so navigation cannot interrupt a request. */
-export function useReport(domain: string, hasKey: boolean, market: string) {
+export function useReport(domain: string, hasKey: boolean, market: string, page = "") {
   const [results, setResults] = useState(initial);
   const alive = useRef(true);
   const activeRuns = useRef(new Set<ReportId>());
@@ -36,12 +42,57 @@ export function useReport(domain: string, hasKey: boolean, market: string) {
       setResults((previous) => ({ ...previous, [id]: { ...previous[id], ...values } }));
   }, []);
 
+  const subject = useCallback((id: ReportId) => (PAGE_IDS.has(id) ? page : domain), [domain, page]);
+
+  // A new page starts its page lookups from nothing. A request for the old
+  // page may still be in flight; its reply is dropped (see run), and it must
+  // not hold the new page's request back.
+  //
+  // This is done during render, not in an effect: child effects run first, so
+  // the Report would start the new page's request and an effect here would
+  // then clear it. Here the Report first sees the page as loading, and starts
+  // its request only after the saved result is read.
+  const currentPage = useRef(page);
+  const [shownPage, setShownPage] = useState(page);
+  if (shownPage !== page) {
+    setShownPage(page);
+    currentPage.current = page;
+    for (const id of PAGE_IDS) {
+      activeRuns.current.delete(id);
+      waiting.current.delete(id);
+    }
+    setResults((previous) => ({
+      ...previous,
+      ...Object.fromEntries(
+        [...PAGE_IDS].map((id) => [
+          id,
+          { entry: null, loading: true, running: false, error: null },
+        ]),
+      ),
+    }));
+  }
+
+  // Only an unmount stops updates. A new subject must not: a request it
+  // starts in the same commit would lose its running state.
   useEffect(() => {
     alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     let live = true;
     const read = async () => {
       await Promise.all(
         IDS.map(async (id) => {
+          const domain = subject(id);
+          // No page yet, or one that cannot be looked up: drop what the last
+          // page had, so it is not shown under this one.
+          if (!domain) {
+            patch(id, { entry: null, loading: false, error: null });
+            return;
+          }
           try {
             const entry = (await chrome.runtime.sendMessage(
               id === "traffic"
@@ -122,14 +173,14 @@ export function useReport(domain: string, hasKey: boolean, market: string) {
 
     return () => {
       live = false;
-      alive.current = false;
       clearInterval(tick);
       chrome.storage.onChanged.removeListener(changed);
     };
-  }, [domain, market, patch]);
+  }, [domain, market, patch, subject]);
 
   const run = async (id: ReportId, force = false) => {
     const current = results[id];
+    const domain = subject(id);
     if (
       !hasKey ||
       !domain ||
@@ -141,6 +192,8 @@ export function useReport(domain: string, hasKey: boolean, market: string) {
       return;
     activeRuns.current.add(id);
     patch(id, { running: true, error: null });
+    // Whether this reply is still about the page on screen.
+    const stillShown = () => !PAGE_IDS.has(id) || currentPage.current === domain;
     try {
       const reply = (await chrome.runtime.sendMessage({
         type: id === "traffic" ? "openseo:traffic" : "openseo:lookup",
@@ -149,6 +202,7 @@ export function useReport(domain: string, hasKey: boolean, market: string) {
         force,
         market,
       })) as RunResult | TrafficResult;
+      if (!stillShown()) return;
       if (!reply) throw new Error("Request interrupted");
       if (reply.ok || "empty" in reply) {
         const payload: PanelEntry["payload"] = !reply.ok
@@ -184,10 +238,12 @@ export function useReport(domain: string, hasKey: boolean, market: string) {
         patch(id, { error: reply.reason });
       }
     } catch {
-      patch(id, { error: "The request was interrupted. Try again in a moment." });
+      if (stillShown()) patch(id, { error: "The request was interrupted. Try again in a moment." });
     } finally {
-      activeRuns.current.delete(id);
-      if (!waiting.current.has(id)) patch(id, { running: false });
+      if (stillShown()) {
+        activeRuns.current.delete(id);
+        if (!waiting.current.has(id)) patch(id, { running: false });
+      }
     }
   };
   return { results, run };

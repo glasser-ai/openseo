@@ -14,7 +14,7 @@ glasser or any other service.
 
 | Destination | Purpose and data sent |
 | --- | --- |
-| `api.glasser.ai` | Key validation and balance checks; endpoint descriptions and prices; paid Runs and recovery. Requests use your glasser Key as a Bearer credential. Paid requests include the selected domain, the country chosen for Search, when one is chosen, and endpoint parameters. Each Run also carries a tag that names OpenSEO and its version, so glasser can tell OpenSEO's requests from other requests made with the same Key. The tag holds no page, domain or user data. Recovery uses a Run ID or the original request and idempotency key. |
+| `api.glasser.ai` | Key validation and balance checks; endpoint descriptions and prices; paid Runs and recovery. Requests use your glasser Key as a Bearer credential. Paid requests include the selected domain, the country chosen for Search, when one is chosen, and endpoint parameters. The Page section's keyword lookup sends a page address instead of the domain: the canonical address the page publishes, or else the open page's origin and path. From either address, tracking parameters such as `utm_*`, a user name and password, and the `#` fragment are dropped. If the address has another query string and the page names no canonical address, nothing is sent, because the query string can hold private data. Each Run also carries a tag that names OpenSEO and its version, so glasser can tell OpenSEO's requests from other requests made with the same Key. The tag holds no page, domain or user data. Recovery uses a Run ID or the original request and idempotency key. |
 | The open site | `/robots.txt`, requested from the page itself when the Page or AI search section opens. It is a normal same-site request without cookies, and no glasser Key is sent. |
 | `data.iana.org/rdap/dns.json` | Public registry discovery. The list is cached for seven days. No glasser Key is sent. |
 | The RDAP registry selected from IANA's list | Registration dates for the registrable domain, such as `example.com` for `docs.example.com`. Results are cached for thirty days. No glasser Key is sent. Registries without a usable public CORS endpoint may be unavailable. |
@@ -39,7 +39,7 @@ OpenSEO and the link location; it does not include your Key or the inspected dom
 ## Local storage
 
 Chrome's local extension storage holds your Key, settings, spending counters, reservations,
-recent charge history, request identities, selected domains and cached results. This storage is
+recent charge history, request identities, selected domains, page URLs looked up and cached results. This storage is
 not encrypted by OpenSEO and is not synced by the extension. Chrome restricts access to trusted
 extension contexts; website content scripts cannot read the Key or ledger.
 

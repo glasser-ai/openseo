@@ -2,9 +2,11 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { DEFAULT_MARKET } from "../../domain/markets.js";
+import { lookupTarget, type PageFacts } from "../../domain/page.js";
 import { KeywordTable, keywordDisplay } from "../KeywordTable.js";
 import type { Tab } from "../navigation.js";
 import { Report } from "../Report.js";
+import { usePage } from "../usePage.js";
 import { useReport } from "../useReport.js";
 
 let root: Root;
@@ -21,11 +23,16 @@ const saved = {
 };
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  scanned = {
+    ...pageFacts,
+    url: "https://example.com/blog",
+    canonical: "https://example.com/blog",
+  };
   send = vi.fn(async (message) => {
     if (message.type === "openseo:settings") return { ok: true };
     if (message.type === "openseo:peek") return message.lookup === "domain-rating" ? saved : null;
     if (message.type === "openseo:peek-traffic") return null;
-    if (message.type === "openseo:page") return { kind: "ok", facts: pageFacts };
+    if (message.type === "openseo:page") return { kind: "ok", facts: scanned };
     if (message.type === "openseo:lookup")
       return new Promise((resolve) => {
         resolveRun = resolve;
@@ -51,7 +58,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
 });
-const pageFacts = {
+const pageFacts: PageFacts = {
   url: "https://example.com/",
   title: "Example: a title long enough for the check",
   description: null,
@@ -72,23 +79,40 @@ const pageFacts = {
   robots: { kind: "found", text: "User-agent: GPTBot\nDisallow: /\n" },
 };
 
-/** Use the same report state owner as the panel. */
+let scanned: PageFacts;
+
+/** Use the same report state owner, and the same scan, as the panel. */
 const onMarket = vi.fn();
-function Harness(props: { domain: string; hasKey: boolean; tab: Tab }) {
-  const report = useReport(props.domain, props.hasKey, DEFAULT_MARKET.id);
+function Harness(props: { domain: string; hasKey: boolean; tab: Tab; address: string }) {
+  const { scan, fresh } = usePage(
+    props.tab === "page" || props.tab === "ai" ? props.tab : null,
+    props.address,
+  );
+  const target = scan.kind === "ok" ? lookupTarget(scan.facts) : null;
+  const report = useReport(
+    props.domain,
+    props.hasKey,
+    DEFAULT_MARKET.id,
+    target?.kind === "ok" ? target.url : "",
+  );
   return createElement(Report, {
-    ...props,
+    domain: props.domain,
+    hasKey: props.hasKey,
+    tab: props.tab,
     market: DEFAULT_MARKET,
     onMarket,
     onTab: vi.fn(),
     onSettings: vi.fn(),
     report,
+    scan,
+    fresh,
+    target,
   });
 }
 
-async function render(hasKey = true, tab: Tab = "backlinks") {
+async function render(hasKey = true, tab: Tab = "backlinks", address = "https://example.com/blog") {
   await act(async () => {
-    root.render(createElement(Harness, { domain: "example.com", hasKey, tab }));
+    root.render(createElement(Harness, { domain: "example.com", hasKey, tab, address }));
   });
 }
 it("reads saved results without a Key and sends no purchase", async () => {
@@ -441,18 +465,78 @@ it("has no country picker on sections that do not depend on it", async () => {
   expect(container.querySelector("select")).toBeNull();
 });
 
-/* The Page section reads the page, not a Provider: free, with no Key, and
-   nothing bought. */
-it("shows page checks without a Key and buys nothing", async () => {
+/* The checks read the page, not a Provider: free and there without a Key,
+   above the prompt for one. */
+it("shows page checks without a Key, above the Key prompt, and buys nothing", async () => {
   await render(false, "page");
   const text = container.textContent ?? "";
   expect(text).toContain("Indexable");
   expect(text).toContain("Description");
-  expect(text).not.toContain("Add your glasser Key");
+  expect(text.indexOf("Indexable")).toBeLessThan(text.indexOf("Add your glasser Key"));
   expect(send.mock.calls.filter(([message]) => message.type === "openseo:page")).toHaveLength(1);
   expect(send.mock.calls.some(([message]) => /^openseo:(lookup|traffic)$/.test(message.type))).toBe(
     false,
   );
+});
+
+const pageLookups = () =>
+  send.mock.calls
+    .map(([message]) => message as { type: string; lookup?: string; domain?: string })
+    .filter((message) => message.type === "openseo:lookup" && message.lookup === "page-keywords");
+
+/* The page's keywords are asked about the scanned page, not the domain. */
+it("looks up the page's keywords for the scanned page", async () => {
+  await render(true, "page");
+  expect(pageLookups()).toEqual([expect.objectContaining({ domain: "https://example.com/blog" })]);
+  expect(container.textContent).toContain("/blog · All countries");
+});
+
+const pageCard = () =>
+  [...container.querySelectorAll("section")].find((section) =>
+    section.querySelector("h2")?.textContent?.includes("This page's keywords"),
+  );
+
+/* Review: the page's request started in the same commit as the reset for the
+   new page, which cleared its running state, so a paid request ran behind an
+   empty card. */
+it("shows the page's request as running while it is bought", async () => {
+  await render(true, "page");
+  expect(pageLookups()).toHaveLength(1);
+  expect(pageCard()?.textContent).toContain("Fetching");
+  expect(pageCard()?.querySelector(".animate-pulse")).not.toBeNull();
+});
+
+/* Review: the AI tab scanned /a, then the app moved to /b with no new address.
+   The Page tab reads the page again and buys for /b, never from the old scan. */
+it("reads the page again on each section visit and buys only from that scan", async () => {
+  scanned = { ...pageFacts, url: "https://example.com/a", canonical: null };
+  await render(true, "ai", "https://example.com/app");
+  scanned = { ...pageFacts, url: "https://example.com/b", canonical: null };
+  await render(true, "page", "https://example.com/app");
+  expect(send.mock.calls.filter(([message]) => message.type === "openseo:page")).toHaveLength(2);
+  expect(pageLookups().map((message) => message.domain)).toEqual(["https://example.com/b"]);
+});
+
+/* Review: a single-page app moved from /a to /b. A new address scans again,
+   and the keywords follow the new scan rather than the panel's first one. */
+it("scans again and buys for the new page when the address changes", async () => {
+  await render(true, "page", "https://example.com/a");
+  scanned = { ...pageFacts, url: "https://example.com/b", canonical: null };
+  await render(true, "page", "https://example.com/b");
+  expect(send.mock.calls.filter(([message]) => message.type === "openseo:page")).toHaveLength(2);
+  expect(pageLookups().map((message) => message.domain)).toEqual([
+    "https://example.com/blog",
+    "https://example.com/b",
+  ]);
+});
+
+/* Review: /?p=123 and /?p=456 are different pages. Without a canonical to say
+   which, nothing is bought, and the reason is shown. */
+it("buys nothing for a query-string page with no canonical", async () => {
+  scanned = { ...pageFacts, url: "https://example.com/?p=123&utm_source=x", canonical: null };
+  await render(true, "page", "https://example.com/?p=123");
+  expect(pageLookups()).toEqual([]);
+  expect(container.textContent).toContain("cannot tell which page to look up");
 });
 
 it("puts AI crawler access above the citations", async () => {

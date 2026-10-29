@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_MARKET, type Market, marketOf } from "../domain/markets.js";
+import { lookupTarget } from "../domain/page.js";
 import type { Tab } from "./navigation.js";
 import { Report } from "./Report.jsx";
 import { SettingsView } from "./SettingsView.jsx";
 import { Sidebar } from "./Sidebar.jsx";
+import { usePage } from "./usePage.js";
 import { useReport } from "./useReport.js";
 import { type SiteState, useSite } from "./useSite.js";
 import { useThemeIcon } from "./useThemeIcon.js";
@@ -196,7 +198,16 @@ function ReportWorkspace({
   readonly onSettings: () => void;
   readonly close: () => void;
 }) {
-  const report = useReport(domain, connection?.hasKey === true, market.id);
+  // One scan serves the Page checks, the AI crawler card and the page's
+  // keywords, so all three describe the same page; see lookupTarget. Settings
+  // hides the tab, so coming back from it is a new visit too.
+  const { scan, fresh } = usePage(
+    !settingsOpen && (tab === "page" || tab === "ai") ? tab : null,
+    state.kind === "ready" ? state.url : "",
+  );
+  const target = scan.kind === "ok" ? lookupTarget(scan.facts) : null;
+  const page = target?.kind === "ok" ? target.url : "";
+  const report = useReport(domain, connection?.hasKey === true, market.id, page);
   return (
     <div className="report-workspace flex min-h-0 flex-1">
       <Sidebar tab={tab} onTab={select} settingsOpen={settingsOpen} onSettings={onSettings} />
@@ -236,6 +247,9 @@ function ReportWorkspace({
         ) : (
           <Report
             report={report}
+            scan={scan}
+            fresh={fresh}
+            target={target}
             onSettings={onSettings}
             domain={state.host}
             hasKey={connection.hasKey}
