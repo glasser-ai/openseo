@@ -1,3 +1,4 @@
+import { COUNTRIES, countryOf, type Market, placeOf } from "./markets.js";
 import { registrableDomain } from "./site.js";
 
 /**
@@ -15,6 +16,9 @@ export const REPORT_TITLE = {
   "organic-traffic": "Organic search",
   "ranked-keywords": "Ranking keywords",
   "traffic-history": "Search traffic, 12 months",
+  competitors: "Search competitors",
+  "top-pages": "Top pages",
+  "page-keywords": "This page's keywords",
   "ai-citations": "AI search citations",
   company: "Company",
   technologies: "Technologies",
@@ -26,6 +30,9 @@ export type LookupId =
   | "ranked-keywords"
   | "backlinks"
   | "traffic-history"
+  | "competitors"
+  | "top-pages"
+  | "page-keywords"
   | "ai-citations"
   | "company"
   | "technologies";
@@ -46,8 +53,25 @@ export type KeywordRow = {
    * fields, so both are optional.
    */
   readonly traffic?: number | null;
+  /** Set only in an all-countries answer: the country whose figures the row
+      shows. */
+  readonly country?: string;
   /** Cost per click for the keyword, as a read on what it is worth. */
   readonly cpc?: number | null;
+};
+
+/**
+ * One row of a ranked list: a competing domain, or one of the domain's pages.
+ * Both lists answer "where does the search traffic go", so they share a shape
+ * and one table draws them.
+ */
+export type RankedRow = {
+  /** A domain, or a page's URL. */
+  readonly name: string;
+  /** Estimated monthly visits from Google search. */
+  readonly visits: number | null;
+  /** Shared keywords for a competitor; ranking keywords for a page. */
+  readonly keywords: number | null;
 };
 
 export type LookupField = { readonly label: string; readonly value: string };
@@ -60,10 +84,21 @@ export type Lookup = {
   readonly provider: string;
   readonly endpoint: string;
   readonly attribution: { readonly label: string; readonly href: string } | null;
-  readonly buildInput: (domain: string) => unknown;
+  /** The market only matters to lookups with byMarket; the rest ignore it. */
+  readonly buildInput: (domain: string, market: Market) => unknown;
+  /** The answer depends on the country chosen for Search, so the card names it
+      and the cache holds one copy per country. */
+  readonly byMarket?: boolean;
+  /** The Provider answers for all countries at once. Without it, all
+      countries reads one fallback country (see countryOf). */
+  readonly worldwide?: boolean;
+  /** "page" lookups take the open page's URL where the rest take the domain,
+      so each page is its own request and cache entry. */
+  readonly subject?: "domain" | "page";
   readonly extractKeywords?: (output: unknown) => readonly KeywordRow[];
   /** A month-by-month series drawn under the figures, oldest first. */
   readonly extractSeries?: (output: unknown) => readonly SeriesPoint[];
+  readonly extractRanked?: (output: unknown) => readonly RankedRow[];
   /**
    * How the card lays the fields out. "figures" is the default: each field a
    * lead number with a caption. "facts" is a label and value list for text
@@ -73,6 +108,10 @@ export type Lookup = {
   readonly layout?: "figures" | "facts";
   readonly extract: (output: unknown) => readonly LookupField[];
 };
+
+/** The market a lookup actually reads, which the card names. */
+export const marketFor = (lookup: Lookup, market: Market): Market =>
+  lookup.worldwide ? market : countryOf(market);
 
 export const LOOKUPS: readonly Lookup[] = [
   {
@@ -101,7 +140,9 @@ export const LOOKUPS: readonly Lookup[] = [
     // The input is **a flat object**, not DataForSEO's task array — the Adapter
     // does the wrapping. Sending an array is rejected by the contract outright:
     // validation_failed / Expected object at ["input"].
-    buildInput: (domain) => ({ targets: [domain], location_code: 2840, language_code: "en" }),
+    byMarket: true,
+    worldwide: true,
+    buildInput: (domain, market) => ({ targets: [domain], ...placeOf(market) }),
     /**
      * Measured 2026-09-15: tasks[].result[].items[] holds
      * {target, metrics:{organic:{etv,count}, paid:{etv,count}, …}}.
@@ -130,12 +171,9 @@ export const LOOKUPS: readonly Lookup[] = [
     provider: "dataforseo",
     endpoint: "/v3/dataforseo_labs/google/ranked_keywords/live",
     attribution: { label: "Data by DataForSEO", href: "https://dataforseo.com/" },
-    buildInput: (domain) => ({
-      target: domain,
-      location_code: 2840,
-      language_code: "en",
-      limit: 25,
-    }),
+    byMarket: true,
+    worldwide: true,
+    buildInput: (domain, market) => ({ target: domain, ...placeOf(market), limit: 25 }),
     extractKeywords: extractKeywords,
     extract: (output) =>
       extractKeywords(output).map((row) => ({
@@ -175,15 +213,16 @@ export const LOOKUPS: readonly Lookup[] = [
     id: "traffic-history",
     title: "Search traffic, 12 months",
     blurb:
-      "Estimated monthly visits from Google search in the US over the last twelve months, as Semrush models them — a trend, not a visit count.",
+      "Estimated monthly visits from Google search in the chosen country over the last twelve months, as Semrush models them — a trend, not a visit count.",
     provider: "semrush",
     endpoint: "/?type=domain_rank_history",
     attribution: { label: "Data by Semrush", href: "https://www.semrush.com/" },
     // Semrush keys on the bare domain. One charge per month returned, so the
     // limit is the bill: 12 rows at $0.00055.
-    buildInput: (domain) => ({
+    byMarket: true,
+    buildInput: (domain, market) => ({
       domain: registrableDomain(domain),
-      database: "us",
+      database: countryOf(market).id,
       display_limit: 12,
     }),
     /**
@@ -211,6 +250,92 @@ export const LOOKUPS: readonly Lookup[] = [
       semrushMonths(output)
         .map((month) => ({ date: month.date, visits: month.organic }))
         .reverse(),
+  },
+  {
+    id: "competitors",
+    title: "Search competitors",
+    blurb:
+      "Domains that rank for the same Google keywords, by how many they share. Very large general sites are left out.",
+    provider: "dataforseo",
+    endpoint: "/v3/dataforseo_labs/google/competitors_domain/live",
+    attribution: { label: "Data by DataForSEO", href: "https://dataforseo.com/" },
+    byMarket: true,
+    /**
+     * Measured 2026-10-29 on dataforseo.com: without exclude_top_domains the
+     * list was youtube, facebook, reddit, linkedin — every site shares keywords
+     * with them, so they say nothing. With it, semrush, ahrefs and similarweb
+     * came up. The limit of 10 keeps the call at the base charge ($0.0132).
+     */
+    buildInput: (domain, market) => ({
+      target: domain,
+      location_code: countryOf(market).locationCode,
+      language_code: countryOf(market).languageCode,
+      exclude_top_domains: true,
+      limit: 10,
+    }),
+    extractRanked: (output) => extractCompetitors(output),
+    extract: (output) =>
+      extractCompetitors(output).map((row) => ({
+        label: row.name,
+        value: `${compact(row.keywords)} shared keywords`,
+      })),
+  },
+  {
+    id: "top-pages",
+    title: "Top pages",
+    blurb:
+      "The domain's pages that bring the most estimated Google search visits, with how many keywords each ranks for.",
+    provider: "dataforseo",
+    endpoint: "/v3/dataforseo_labs/google/relevant_pages/live",
+    attribution: { label: "Data by DataForSEO", href: "https://dataforseo.com/" },
+    byMarket: true,
+    worldwide: true,
+    /**
+     * Measured 2026-10-29: the default order is by keyword count, which put a
+     * page with 615 keywords and 1.8K visits above the home page with 2.5K.
+     * Ordering by etv makes these the top pages by traffic, not a re-sort of
+     * the Provider's first ten.
+     */
+    buildInput: (domain, market) => ({
+      target: domain,
+      ...placeOf(market),
+      order_by: ["metrics.organic.etv,desc"],
+      limit: 10,
+    }),
+    extractRanked: (output) => extractPages(output),
+    extract: (output) =>
+      extractPages(output).map((row) => ({
+        label: row.name,
+        value: `${compact(row.visits)} visits / month`,
+      })),
+  },
+  {
+    id: "page-keywords",
+    title: "This page's keywords",
+    blurb:
+      "Keywords the open page itself ranks for in Google, with position, monthly volume and estimated visits.",
+    provider: "dataforseo",
+    endpoint: "/v3/dataforseo_labs/google/ranked_keywords/live",
+    attribution: { label: "Data by DataForSEO", href: "https://dataforseo.com/" },
+    byMarket: true,
+    worldwide: true,
+    subject: "page",
+    /**
+     * Measured 2026-10-29: a full URL as the target, with no location, gave
+     * 1,183 keywords for one anthropic.com post at $0.015 for 25 rows. The
+     * target must keep its scheme; the same call takes a bare domain for the
+     * whole site.
+     */
+    buildInput: (url, market) => ({ target: url, ...placeOf(market), limit: 25 }),
+    extractKeywords: extractKeywords,
+    extract: (output) =>
+      extractKeywords(output).map((row) => ({
+        label: row.keyword,
+        value:
+          row.monthlyVolume === null
+            ? `#${row.position}`
+            : `#${row.position} · ${compact(row.monthlyVolume)}/mo`,
+      })),
   },
   {
     id: "ai-citations",
@@ -504,12 +629,83 @@ function plain(value: unknown): string {
   return typeof value === "number" ? String(value) : "—";
 }
 
+/**
+ * Measured 2026-10-29: tasks[].result[].items[] holds {domain, intersections,
+ * avg_position, metrics:{organic:{etv,count}}, full_domain_metrics:{…}}.
+ * metrics counts only the keywords shared with the target;
+ * full_domain_metrics is the competitor's whole site. The first item is the
+ * target itself, which is not its own competitor.
+ */
+export function extractCompetitors(output: unknown): readonly RankedRow[] {
+  const target = resultTarget(output);
+  const rows: RankedRow[] = [];
+  for (const item of walk(output)) {
+    const domain = item["domain"];
+    if (typeof domain !== "string" || item["intersections"] === undefined) continue;
+    if (domain === target) continue;
+    const full = item["full_domain_metrics"] as Record<string, unknown> | undefined;
+    const organic = full?.["organic"] as Record<string, unknown> | undefined;
+    rows.push({
+      name: domain,
+      visits: finite(organic?.["etv"]),
+      keywords: finite(item["intersections"]),
+    });
+  }
+  return rows;
+}
+
+/** Measured 2026-10-29: items[] holds {page_address, metrics:{organic:{etv,
+    count}}}, in the order the input asked for. */
+export function extractPages(output: unknown): readonly RankedRow[] {
+  const rows: RankedRow[] = [];
+  for (const item of walk(output)) {
+    const page = item["page_address"];
+    if (typeof page !== "string") continue;
+    const metrics = item["metrics"] as Record<string, unknown> | undefined;
+    const organic = metrics?.["organic"] as Record<string, unknown> | undefined;
+    rows.push({
+      name: page,
+      visits: finite(organic?.["etv"]),
+      keywords: finite(organic?.["count"]),
+    });
+  }
+  return rows;
+}
+
+function resultTarget(output: unknown): string | null {
+  for (const item of walk(output)) {
+    if (typeof item["target"] === "string" && Array.isArray(item["items"])) return item["target"];
+  }
+  return null;
+}
+
+function finite(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 /** Preserve numeric keyword data; older cached fields remain readable. */
+/**
+ * An all-countries answer lists a keyword once per country (measured
+ * 2026-10-29: "anthropic ai assistant" three times, with 14,800, 1,900 and 110
+ * searches). Each keyword is one row: the country where it brings the most
+ * traffic, named under the keyword. The figures are **not** added up: the
+ * limit cuts the list at 25 rows, so the other countries are a sample, and a
+ * sum of them would read as a worldwide total it is not.
+ */
 export function extractKeywords(output: unknown): readonly KeywordRow[] {
-  const rows: KeywordRow[] = [];
+  const num = (value: unknown): number | null =>
+    typeof value === "number" && Number.isFinite(value) ? value : null;
+  const worldwide = walkResults(output).some(
+    (result) => "location_code" in result && result["location_code"] === null,
+  );
+  const rows = new Map<string, KeywordRow>();
   for (const item of walk(output)) {
     const data = item["keyword_data"] as
-      | { keyword?: unknown; keyword_info?: { search_volume?: unknown; cpc?: unknown } }
+      | {
+          keyword?: unknown;
+          location_code?: unknown;
+          keyword_info?: { search_volume?: unknown; cpc?: unknown };
+        }
       | undefined;
     const serp = item["ranked_serp_element"] as
       | { serp_item?: { rank_absolute?: unknown; etv?: unknown } }
@@ -521,17 +717,33 @@ export function extractKeywords(output: unknown): readonly KeywordRow[] {
       !Number.isFinite(position)
     )
       continue;
-    const volume = data.keyword_info?.search_volume;
-    const num = (value: unknown): number | null =>
-      typeof value === "number" && Number.isFinite(value) ? value : null;
-    rows.push({
+    const row: KeywordRow = {
       keyword: data.keyword,
       position,
-      monthlyVolume: num(volume),
+      monthlyVolume: num(data.keyword_info?.search_volume),
       traffic: num(serp?.serp_item?.etv),
       cpc: num(data.keyword_info?.cpc),
-    });
-    if (rows.length === 25) break;
+      ...(worldwide ? { country: countryName(data.location_code) } : {}),
+    };
+    const seen = rows.get(row.keyword);
+    if (seen ? (row.traffic ?? -1) > (seen.traffic ?? -1) : rows.size < 25)
+      rows.set(row.keyword, row);
   }
-  return rows;
+  return [...rows.values()];
+}
+
+/** DataForSEO location codes are 2000 plus the ISO 3166 numeric code. */
+function countryName(code: unknown): string {
+  return COUNTRIES.find((country) => country.locationCode === code)?.name ?? "Another country";
+}
+
+function walkResults(output: unknown): Record<string, unknown>[] {
+  const tasks = (output as { tasks?: unknown } | null)?.tasks;
+  if (!Array.isArray(tasks)) return [];
+  return tasks.flatMap((task) => {
+    const result = (task as { result?: unknown } | null)?.result;
+    return Array.isArray(result)
+      ? result.filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+      : [];
+  });
 }

@@ -11,8 +11,10 @@ import {
   LOOKUPS,
   type LookupField,
   type LookupId,
+  type RankedRow,
   type SeriesPoint,
 } from "./lookups.js";
+import { marketOf } from "./markets.js";
 import { persistPanel } from "./persist.js";
 import {
   extractTraffic,
@@ -58,6 +60,7 @@ export type RunResult =
       readonly fields: readonly LookupField[];
       readonly keywords?: readonly KeywordRow[];
       readonly series?: readonly SeriesPoint[];
+      readonly ranked?: readonly RankedRow[];
       readonly runUrl: string;
       readonly chargeUsd: string | null;
       /** This copy came from the cache and cost nothing. */
@@ -256,23 +259,43 @@ function domainOf(input: Record<string, unknown>): string {
 
 /** Cache reads only — used when the panel mounts: no request, no charge, and no
     Key needed. */
-export async function peekLookup(id: LookupId, domain: string): Promise<PanelEntry | null> {
+export async function peekLookup(
+  id: LookupId,
+  domain: string,
+  market?: string,
+): Promise<PanelEntry | null> {
   const lookup = LOOKUPS.find((item) => item.id === id);
-  return lookup ? readStoredPanel(lookup.endpoint, lookup.buildInput(domain)) : null;
+  return lookup
+    ? readStoredPanel(lookup.endpoint, lookup.buildInput(domain, marketOf(market)))
+    : null;
 }
 
 export const peekTraffic = (domain: string): Promise<PanelEntry | null> =>
   readStoredPanel(TRAFFIC_ENDPOINT, { website: domain });
 
-export function runLookup(id: LookupId, domain: string, force = false): Promise<RunResult> {
-  return coordinate(`${id}:${domain}`, () => runLookupOnce(id, domain, force));
+/** market is a Market id; only lookups with byMarket read it. */
+export function runLookup(
+  id: LookupId,
+  domain: string,
+  force = false,
+  market?: string,
+): Promise<RunResult> {
+  const chosen = marketOf(market);
+  return coordinate(`${id}:${domain}:${chosen.id}`, () =>
+    runLookupOnce(id, domain, force, chosen.id),
+  );
 }
 
-async function runLookupOnce(id: LookupId, domain: string, force = false): Promise<RunResult> {
+async function runLookupOnce(
+  id: LookupId,
+  domain: string,
+  force: boolean,
+  market: string,
+): Promise<RunResult> {
   const lookup = LOOKUPS.find((item) => item.id === id);
   if (!lookup) return { ok: false, reason: "unknown lookup" };
 
-  const cacheInput = lookup.buildInput(domain);
+  const cacheInput = lookup.buildInput(domain, marketOf(market));
   if (!force) {
     const cached = await readPanel(lookup.endpoint, cacheInput);
     if (cached?.payload.kind === "none") {
@@ -292,6 +315,7 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
         fields: cached.payload.fields,
         ...(cached.payload.keywords ? { keywords: cached.payload.keywords } : {}),
         ...(cached.payload.series ? { series: cached.payload.series } : {}),
+        ...(cached.payload.ranked ? { ranked: cached.payload.ranked } : {}),
         runUrl: cached.runUrl,
         chargeUsd: cached.chargeUsd,
         cached: true,
@@ -309,8 +333,8 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
   }
 
   if (!force && (await readPanel(lookup.endpoint, cacheInput)))
-    return runLookupOnce(id, domain, false);
-  const input = lookup.buildInput(domain);
+    return runLookupOnce(id, domain, false, market);
+  const input = lookup.buildInput(domain, marketOf(market));
   const epoch = await serialized(async () => {
     if (force) await forgetEpoch(lookup.endpoint, input);
     return epochFor(lookup.endpoint, input);
@@ -329,6 +353,7 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
   let fields: readonly LookupField[] = [];
   let keywords: readonly KeywordRow[] | undefined;
   let series: readonly SeriesPoint[] | undefined;
+  let ranked: readonly RankedRow[] | undefined;
   let runUrl = "";
   let chargeUsd: string | null = null;
 
@@ -350,6 +375,7 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
       fields = lookup.extract(run.output);
       keywords = lookup.extractKeywords?.(run.output);
       series = lookup.extractSeries?.(run.output);
+      ranked = lookup.extractRanked?.(run.output);
       runUrl = run.run_url;
       chargeUsd = run.charge_usd;
     },
@@ -393,6 +419,7 @@ async function runLookupOnce(id: LookupId, domain: string, force = false): Promi
     fields,
     ...(keywords ? { keywords } : {}),
     ...(series?.length ? { series } : {}),
+    ...(ranked ? { ranked } : {}),
     runUrl,
     chargeUsd,
     cached: false,
@@ -407,12 +434,17 @@ export type ReportState = {
 };
 
 /** A consistent local snapshot; no API request and no purchase. */
-export function readReportState(id: LookupId | "traffic", domain: string): Promise<ReportState> {
+export function readReportState(
+  id: LookupId | "traffic",
+  domain: string,
+  market?: string,
+): Promise<ReportState> {
   return serialized(async () => {
     const lookup = LOOKUPS.find((item) => item.id === id);
     const provider = id === "traffic" ? TRAFFIC_PROVIDER : lookup?.provider;
     const endpoint = id === "traffic" ? TRAFFIC_ENDPOINT : lookup?.endpoint;
-    const input = id === "traffic" ? { website: domain } : lookup?.buildInput(domain);
+    const input =
+      id === "traffic" ? { website: domain } : lookup?.buildInput(domain, marketOf(market));
     if (!provider || !endpoint) throw new Error("Unknown report");
     const entry = await readStoredPanel(endpoint, input);
     const pending = await unresolvedRequest(provider, endpoint, input);

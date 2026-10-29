@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_MARKET, type Market, marketOf } from "../domain/markets.js";
+import { lookupTarget } from "../domain/page.js";
 import type { Tab } from "./navigation.js";
 import { Report } from "./Report.jsx";
 import { SettingsView } from "./SettingsView.jsx";
 import { Sidebar } from "./Sidebar.jsx";
+import { usePage } from "./usePage.js";
 import { useReport } from "./useReport.js";
 import { type SiteState, useSite } from "./useSite.js";
 import { useThemeIcon } from "./useThemeIcon.js";
@@ -46,6 +49,10 @@ export function Shell() {
   const [tab, setTab] = useState<Tab>("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [connection, setConnection] = useState<{ hasKey: boolean; revision: number } | null>(null);
+  // Not stored: every panel opens on all countries, and a country is a detail
+  // looked at for this panel only.
+  const [market, setMarket] = useState<Market>(DEFAULT_MARKET);
+  const chooseMarket = useCallback((id: string) => setMarket(marketOf(id)), []);
   const scroll = useRef<HTMLDivElement>(null);
   const unavailable = new URLSearchParams(location.search).has("unavailable");
   const close = () => {
@@ -141,8 +148,10 @@ export function Shell() {
         </IconButton>
       </header>
       <ReportWorkspace
-        key={`${domain}:${connection?.revision ?? 0}`}
+        key={`${domain}:${connection?.revision ?? 0}:${market.id}`}
         domain={domain}
+        market={market}
+        onMarket={chooseMarket}
         state={state}
         connection={connection}
         unavailable={unavailable}
@@ -160,9 +169,12 @@ export function Shell() {
   );
 }
 
-/** Reset results and in-flight callbacks together when the domain or Key changes. */
+/** Reset results and in-flight callbacks together when the domain, Key or
+    Search country changes. */
 function ReportWorkspace({
   domain,
+  market,
+  onMarket,
   state,
   connection,
   unavailable,
@@ -174,6 +186,8 @@ function ReportWorkspace({
   close,
 }: {
   readonly domain: string;
+  readonly market: Market;
+  readonly onMarket: (id: string) => void;
   readonly state: SiteState;
   readonly connection: { hasKey: boolean; revision: number } | null;
   readonly unavailable: boolean;
@@ -184,7 +198,16 @@ function ReportWorkspace({
   readonly onSettings: () => void;
   readonly close: () => void;
 }) {
-  const report = useReport(domain, connection?.hasKey === true);
+  // One scan serves the Page checks, the AI crawler card and the page's
+  // keywords, so all three describe the same page; see lookupTarget. Settings
+  // hides the tab, so coming back from it is a new visit too.
+  const { scan, fresh } = usePage(
+    !settingsOpen && (tab === "page" || tab === "ai") ? tab : null,
+    state.kind === "ready" ? state.url : "",
+  );
+  const target = scan.kind === "ok" ? lookupTarget(scan.facts) : null;
+  const page = target?.kind === "ok" ? target.url : "";
+  const report = useReport(domain, connection?.hasKey === true, market.id, page);
   return (
     <div className="report-workspace flex min-h-0 flex-1">
       <Sidebar tab={tab} onTab={select} settingsOpen={settingsOpen} onSettings={onSettings} />
@@ -224,9 +247,14 @@ function ReportWorkspace({
         ) : (
           <Report
             report={report}
+            scan={scan}
+            fresh={fresh}
+            target={target}
             onSettings={onSettings}
             domain={state.host}
             hasKey={connection.hasKey}
+            market={market}
+            onMarket={onMarket}
             tab={tab}
             onTab={select}
           />

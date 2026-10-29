@@ -28,6 +28,7 @@ export function keywordDisplay(rows: readonly LookupField[], keywords?: readonly
   const shown = keywords
     ? keywords.map((row) => ({
         keyword: row.keyword,
+        country: row.country,
         position: String(row.position),
         traffic: count(row.traffic),
         volume: row.monthlyVolume === null ? "—" : row.monthlyVolume.toLocaleString("en-US"),
@@ -46,6 +47,7 @@ export function keywordDisplay(rows: readonly LookupField[], keywords?: readonly
         const rank = Number(position);
         return {
           keyword: row.label,
+          country: undefined as string | undefined,
           position,
           traffic: "—",
           volume,
@@ -87,6 +89,9 @@ export function KeywordTable({
         <caption>
           {shown.length} keywords · Provider's selection, sorted by{" "}
           {shown.some((row) => row.traffic !== "—") ? "traffic" : "monthly volume"}
+          {/* Each row is one country's figures, so the caption says the rows
+              are not worldwide totals. */}
+          {shown.some((row) => row.country) && " · figures for the country named"}
         </caption>
         <thead>
           <tr>
@@ -102,7 +107,12 @@ export function KeywordTable({
         <tbody>
           {shown.map((row, index) => (
             <tr key={`${row.keyword}:${index}`}>
-              <td>{row.keyword}</td>
+              <td>
+                {row.keyword}
+                {row.country && (
+                  <span className="block text-small text-muted-foreground">{row.country}</span>
+                )}
+              </td>
               {/*
                 Only the position column is toned. Position is bounded and
                 directional: the top three take most of the clicks, and 4-10 is

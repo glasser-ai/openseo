@@ -291,6 +291,14 @@ body,
   .result-source { margin-top: 16px; border-top: 1px solid var(--color-border); padding-top: 12px; font-size: var(--text-small); color: var(--color-muted-foreground); }
   .result-source a { text-decoration: underline; text-underline-offset: 3px; }
   .field { display: block; width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--color-card); color: var(--color-foreground); }
+  .check-list > div { display: grid; grid-template-columns: 34% 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--color-border); }
+  .check-list > div:first-child { border-top: 0; }
+  .check-list dt { color: var(--color-muted-foreground); }
+  .check-list dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  .crawler-table th:first-child, .crawler-table td:first-child { width: 44%; text-align: left; }
+  .market-picker { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: var(--text-small); }
+  .market-select { min-width: 0; min-height: 32px; border: 0; border-radius: var(--radius-sm); padding: 4px 6px; background: transparent; color: var(--color-foreground); font-weight: 500; cursor: pointer; }
+  .market-select:hover { background: var(--color-muted); }
   .report-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--color-border); background: var(--color-card); padding: 0 12px; }
   .report-tabs button { flex: 1; min-width: 0; min-height: 48px; border-bottom: 2px solid transparent; color: var(--color-muted-foreground); cursor: pointer; }
   .report-tabs button[aria-selected=true] { color: var(--color-foreground); border-color: var(--color-primary); font-weight: 600; }
@@ -304,6 +312,9 @@ body,
   .keyword-table th:first-child, .keyword-table td:first-child { width: 34%; padding-left: 0; padding-right: 8px; text-align: left; }
   .keyword-table th:not(:first-child), .keyword-table td:not(:first-child) { width: 16.5%; padding-left: 4px; }
   .keyword-table tr:last-child td { border-bottom: 0; }
+  /* Three columns: the name takes what the two numbers leave. */
+  .ranked-table th:first-child, .ranked-table td:first-child { width: 56%; }
+  .ranked-table th:not(:first-child), .ranked-table td:not(:first-child) { width: 22%; }
   .options-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 32px; max-width: 960px; margin: auto; padding: 32px 24px; }
   .options-nav { display: flex; flex-direction: column; gap: 4px; }
   .options-nav a { display: block; padding: 10px 12px; border-radius: var(--radius-sm); color: var(--color-muted-foreground); }

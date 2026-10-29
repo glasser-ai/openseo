@@ -1,4 +1,4 @@
-import type { KeywordRow, LookupField, SeriesPoint } from "./lookups.js";
+import type { KeywordRow, LookupField, RankedRow, SeriesPoint } from "./lookups.js";
 import type { TrafficPanel } from "./traffic.js";
 
 /** Saved domain reports are reused until expiry; explicit Refresh requests a new lookup. */
@@ -17,6 +17,7 @@ export type PanelPayload =
       readonly fields: readonly LookupField[];
       readonly keywords?: readonly KeywordRow[];
       readonly series?: readonly SeriesPoint[];
+      readonly ranked?: readonly RankedRow[];
     }
   | { readonly kind: "traffic"; readonly panel: TrafficPanel }
   /**

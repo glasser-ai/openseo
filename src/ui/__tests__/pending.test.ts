@@ -23,7 +23,7 @@ it.each(["Provider timed out", "Request suspended. Check Activity in Settings."]
     });
     let report: ReturnType<typeof useReport> | undefined;
     function Probe() {
-      report = useReport("example.com", true);
+      report = useReport("example.com", true, "us");
       return null;
     }
     const host = document.createElement("div");
