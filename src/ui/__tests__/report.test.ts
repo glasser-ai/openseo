@@ -1,6 +1,7 @@
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { DEFAULT_MARKET } from "../../domain/markets.js";
 import { KeywordTable, keywordDisplay } from "../KeywordTable.js";
 import type { Tab } from "../navigation.js";
 import { Report } from "../Report.js";
@@ -9,7 +10,7 @@ import { useReport } from "../useReport.js";
 let root: Root;
 let container: HTMLElement;
 let send: ReturnType<
-  typeof vi.fn<(message: { type: string; lookup?: string }) => Promise<unknown>>
+  typeof vi.fn<(message: { type: string; lookup?: string; market?: string }) => Promise<unknown>>
 >;
 let resolveRun: ((value: unknown) => void) | undefined;
 const saved = {
@@ -50,9 +51,17 @@ afterEach(async () => {
   container.remove();
 });
 /** Use the same report state owner as the panel. */
+const onMarket = vi.fn();
 function Harness(props: { domain: string; hasKey: boolean; tab: Tab }) {
-  const report = useReport(props.domain, props.hasKey);
-  return createElement(Report, { ...props, onTab: vi.fn(), onSettings: vi.fn(), report });
+  const report = useReport(props.domain, props.hasKey, DEFAULT_MARKET.id);
+  return createElement(Report, {
+    ...props,
+    market: DEFAULT_MARKET,
+    onMarket,
+    onTab: vi.fn(),
+    onSettings: vi.fn(),
+    report,
+  });
 }
 
 async function render(hasKey = true, tab: Tab = "backlinks") {
@@ -377,4 +386,33 @@ it("names monthly volume when no row carries a traffic figure", async () => {
     { keyword: "b", position: 9, monthlyVolume: 90 },
   ]);
   expect(caption).toContain("sorted by monthly volume");
+});
+
+/* Search starts on all countries and lets a user narrow it; the request
+   carries the market to the worker. Reports with no worldwide answer say they
+   read one country, so a US figure is not taken for the site's total. */
+it("starts Search on all countries and sends the market with each lookup", async () => {
+  onMarket.mockReset();
+  await render(true, "search");
+  const select = container.querySelector("select")!;
+  expect(select.value).toBe("all");
+  expect(container.textContent).toContain("All countries");
+  expect(container.textContent).toContain("United States only");
+  const lookups = send.mock.calls
+    .map(([message]) => message)
+    .filter((message) => message.type === "openseo:lookup");
+  expect(lookups.map((message) => message.lookup)).toEqual(
+    expect.arrayContaining(["organic-traffic", "ranked-keywords", "traffic-history"]),
+  );
+  expect(lookups.every((message) => message.market === "all")).toBe(true);
+  await act(async () => {
+    select.value = "br";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(onMarket).toHaveBeenCalledWith("br");
+});
+
+it("has no country picker on sections that do not depend on it", async () => {
+  await render(true, "backlinks");
+  expect(container.querySelector("select")).toBeNull();
 });

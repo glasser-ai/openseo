@@ -45,7 +45,12 @@ and browser restarts. Opening a section automatically fetches missing or outdate
 is a section of five, so opening the panel on a domain with nothing saved fetches all five, about
 **$0.06**; reopening it within the 7 days costs nothing. The default $5/day covers roughly 80 new
 domains. AI search citations cost **$0.13** and the Site section about **$0.02**; each is fetched
-only when that section is opened. **Refresh** requests new data. New lookups use your glasser balance; cached results are
+only when that section is opened.
+
+Search reads Google in all countries each time the panel opens. To see one country, select it in **Google search
+in** at the top of the Search section. The 12-month traffic history has no all-countries data,
+so with all countries it shows the United States and says so. Each choice
+is a separate lookup with its own charge and cache. **Refresh** requests new data. New lookups use your glasser balance; cached results are
 free to view.
 
 Settings provides estimated budgets of **$5/day** and **$20/month** per browser profile.

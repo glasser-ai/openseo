@@ -87,6 +87,7 @@ export default defineBackground(() => {
       dark?: boolean;
       idemKey?: string;
       force?: boolean;
+      market?: string;
     };
 
     if (payload.type === "openseo:settings" && payload.patch) {
@@ -121,8 +122,9 @@ export default defineBackground(() => {
       return true;
     }
     if (payload.type === "openseo:report-state" && payload.domain && payload.lookup) {
-      readReportState(payload.lookup as never, payload.domain).then(sendResponse, () =>
-        sendResponse(null),
+      readReportState(payload.lookup as never, payload.domain, payload.market).then(
+        sendResponse,
+        () => sendResponse(null),
       );
       return true;
     }
@@ -134,16 +136,18 @@ export default defineBackground(() => {
       return true;
     }
     if (payload.type === "openseo:lookup" && payload.lookup && payload.domain) {
-      runLookup(payload.lookup as never, payload.domain, payload.force === true).then(
-        sendResponse,
-        (error: unknown) => sendResponse({ ok: false, reason: String(error) }),
-      );
+      runLookup(
+        payload.lookup as never,
+        payload.domain,
+        payload.force === true,
+        payload.market,
+      ).then(sendResponse, (error: unknown) => sendResponse({ ok: false, reason: String(error) }));
       return true;
     }
     // Cache reads only. Used when the panel mounts: no request, no charge, and
     // no Key needed.
     if (payload.type === "openseo:peek" && payload.lookup && payload.domain) {
-      peekLookup(payload.lookup as never, payload.domain).then(sendResponse, () =>
+      peekLookup(payload.lookup as never, payload.domain, payload.market).then(sendResponse, () =>
         sendResponse(null),
       );
       return true;

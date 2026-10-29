@@ -12,6 +12,7 @@ import type { Run } from "../../glasser/schema.js";
 import type { PendingRecord } from "../../ledger/store.js";
 import { isOutdated, readPanel, readStoredPanel, writePanel } from "../cache.js";
 import { extractKeywords, LOOKUPS } from "../lookups.js";
+import { DEFAULT_MARKET } from "../markets.js";
 import { persistRecoveredPanel } from "../persist.js";
 import { peekLookup, peekTraffic, runLookup, runTraffic } from "../service.js";
 
@@ -102,17 +103,22 @@ describe("report purchase and cache behavior", () => {
     expect(api.dispatch).toHaveBeenCalledTimes(1);
   });
   it("retains old data for reading but expires its automatic reuse", async () => {
-    await writePanel(lookup.endpoint, lookup.buildInput("example.com"), {
+    await writePanel(lookup.endpoint, lookup.buildInput("example.com", DEFAULT_MARKET), {
       payload: { kind: "fields", fields: [{ label: "Domain Rating", value: "42" }] },
       runUrl: run.run_url,
       chargeUsd: null,
     });
     const cacheKey = Object.keys(bag).find((key) => key.startsWith("openseo:panel:"))!;
     bag[cacheKey] = { ...(bag[cacheKey] as object), fetchedAt: Date.now() - 8 * 86400000 };
-    const entry = await readStoredPanel(lookup.endpoint, lookup.buildInput("example.com"));
+    const entry = await readStoredPanel(
+      lookup.endpoint,
+      lookup.buildInput("example.com", DEFAULT_MARKET),
+    );
     expect(entry).not.toBeNull();
     expect(isOutdated(entry!)).toBe(true);
-    expect(await readPanel(lookup.endpoint, lookup.buildInput("example.com"))).toBeNull();
+    expect(
+      await readPanel(lookup.endpoint, lookup.buildInput("example.com", DEFAULT_MARKET)),
+    ).toBeNull();
     expect(api.dispatch).not.toHaveBeenCalled();
   });
   it("recovers a panel request into its saved report", async () => {
@@ -121,7 +127,7 @@ describe("report purchase and cache behavior", () => {
         purpose: { kind: "panel" },
         provider: "ahrefs",
         endpoint: lookup.endpoint,
-        input: lookup.buildInput("example.com"),
+        input: lookup.buildInput("example.com", DEFAULT_MARKET),
       } as PendingRecord,
       run,
     );
@@ -207,7 +213,7 @@ it("keeps a saved report when a refreshed or recovered Run fails", async () => {
       purpose: { kind: "panel" },
       provider: "ahrefs",
       endpoint: lookup.endpoint,
-      input: lookup.buildInput("example.com"),
+      input: lookup.buildInput("example.com", DEFAULT_MARKET),
     } as PendingRecord,
     { ...failed, status: "FAILED" },
   );
@@ -215,7 +221,7 @@ it("keeps a saved report when a refreshed or recovered Run fails", async () => {
 });
 
 it("coordinates two automatic renewals of the same expired report", async () => {
-  const input = lookup.buildInput("example.com");
+  const input = lookup.buildInput("example.com", DEFAULT_MARKET);
   await writePanel(lookup.endpoint, input, {
     payload: { kind: "fields", fields: [{ label: "Domain Rating", value: "1" }] },
     runUrl: "old",
@@ -255,7 +261,7 @@ it("rechecks the cache when recovery finishes during endpoint inspection", async
         purpose: { kind: "panel" },
         provider: run.provider,
         endpoint: run.endpoint,
-        input: lookup.buildInput("example.com"),
+        input: lookup.buildInput("example.com", DEFAULT_MARKET),
       } as PendingRecord,
       run,
     );

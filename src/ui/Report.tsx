@@ -5,9 +5,11 @@ import {
   LOOKUPS,
   type LookupField,
   type LookupId,
+  marketFor,
   REPORT_TITLE,
   type SeriesPoint,
 } from "../domain/lookups.js";
+import { MARKETS, type Market } from "../domain/markets.js";
 import { type Metric, type Tone, toneOf } from "../domain/thresholds.js";
 import { compact, parseCompact } from "../domain/traffic.js";
 import { formatUsd, usdToMicros } from "../ledger/micros.js";
@@ -57,6 +59,8 @@ const TITLE = REPORT_TITLE;
 export function Report({
   domain,
   hasKey,
+  market,
+  onMarket,
   tab,
   onTab,
   onSettings,
@@ -64,6 +68,10 @@ export function Report({
 }: {
   readonly domain: string;
   readonly hasKey: boolean;
+  /** The country every byMarket report reads. Changing it remounts the
+      workspace, so nothing bought for the old country is mixed in. */
+  readonly market: Market;
+  readonly onMarket: (id: string) => void;
   readonly tab: Tab;
   readonly onTab: (next: Tab) => void;
   /** Settings now lives inside the panel, so these entry points no longer send
@@ -115,6 +123,10 @@ export function Report({
             {ids.map((id, index) => {
               const state = results[id];
               const line = headline(id, state, hasKey);
+              // Without the market a UK number reads as the site's whole
+              // search traffic, and a US-only one as worldwide.
+              const where = marketLabel(id, market);
+              const label = where ? `${line.label} · ${where}` : line.label;
               return (
                 <li key={id}>
                   <button
@@ -124,7 +136,7 @@ export function Report({
                       index === 0 ? "" : "border-t border-border"
                     }`}
                   >
-                    <span className="min-w-0 flex-1">{line.label}</span>
+                    <span className="min-w-0 flex-1">{label}</span>
                     {/* Summary rows need a loading state too — the word
                       "fetching" neither looks like motion nor sits anywhere
                       other than where the real number goes. */}
@@ -200,16 +212,63 @@ export function Report({
   return (
     <div className="flex flex-col gap-4 py-4">
       {!hasKey && <ConnectKey onSettings={onSettings} />}
+      {ids.some(byMarket) && <MarketPicker market={market} onMarket={onMarket} />}
       {ids.map((id) => (
         <Panel
           key={id}
           id={id}
+          market={marketLabel(id, market)}
           hasKey={hasKey}
           state={results[id]}
           onRun={() => void run(id, true)}
         />
       ))}
     </div>
+  );
+}
+
+const lookupOf = (id: ReportId) => LOOKUPS.find((lookup) => lookup.id === (id as LookupId));
+
+const byMarket = (id: ReportId): boolean => lookupOf(id)?.byMarket === true;
+
+/** What the card reads, or null for reports the market does not change. A
+    report with no worldwide answer says it is one country's, so the US figure
+    is not taken for the site's total. */
+function marketLabel(id: ReportId, market: Market): string | null {
+  const lookup = lookupOf(id);
+  if (!lookup?.byMarket) return null;
+  const read = marketFor(lookup, market);
+  return read === market ? read.name : `${read.name} only`;
+}
+
+/**
+ * Which country's Google the Search reports read; all countries by default.
+ * Each choice is its own report and its own charge, cached apart, so switching
+ * back is free within the 7 days. Small on purpose: it is a detail, not the
+ * page's main control.
+ */
+function MarketPicker({
+  market,
+  onMarket,
+}: {
+  readonly market: Market;
+  readonly onMarket: (id: string) => void;
+}) {
+  return (
+    <label className="market-picker">
+      <span className="text-muted-foreground">Google search in</span>
+      <select
+        className="market-select"
+        value={market.id}
+        onChange={(event) => onMarket(event.target.value)}
+      >
+        {MARKETS.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -593,11 +652,14 @@ function useLongWait(busy: boolean): boolean {
 
 function Panel({
   id,
+  market,
   hasKey,
   state,
   onRun,
 }: {
   readonly id: ReportId;
+  /** Set only for reports the market changes. */
+  readonly market: string | null;
   readonly hasKey: boolean;
   readonly state: ResultState | undefined;
   readonly onRun: () => void;
@@ -611,6 +673,7 @@ function Panel({
     <section className="report-card">
       <div className="flex items-baseline gap-2">
         <h2 className="text-section font-semibold tracking-tight">{TITLE[id]}</h2>
+        {market && <span className="text-small text-muted-foreground">{market}</span>}
       </div>
 
       {/*

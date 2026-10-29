@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { LOOKUPS } from "../lookups.js";
+import { DEFAULT_MARKET } from "../markets.js";
 
 const lookup = (id: string) => LOOKUPS.find((item) => item.id === id)!;
 
@@ -45,7 +46,7 @@ it("reads AI citations for every platform, all platforms first", () => {
   expect(fields).toContainEqual({ label: "Perplexity pages", value: "104" });
   // Zero is an answer, not an absence: the platform is indexed and cites nothing.
   expect(fields.find((field) => field.label === "Grok")?.value).toBe("0");
-  expect(lookup("ai-citations").buildInput("docs.example.com")).toEqual({
+  expect(lookup("ai-citations").buildInput("docs.example.com", DEFAULT_MARKET)).toEqual({
     target: "docs.example.com",
     mode: "subdomains",
   });
@@ -85,7 +86,7 @@ it("turns the rows into an oldest-first monthly series", () => {
 });
 
 it("asks Semrush about the registrable domain, twelve rows at most", () => {
-  expect(lookup("traffic-history").buildInput("docs.example.com")).toEqual({
+  expect(lookup("traffic-history").buildInput("docs.example.com", DEFAULT_MARKET)).toEqual({
     domain: "example.com",
     database: "us",
     display_limit: 12,
@@ -176,7 +177,9 @@ it("reads every field Hunter fills for the company", () => {
     { label: "Technologies", value: "cloudflare, google-cloud-cdn, youtube" },
     { label: "Traffic level", value: "very low" },
   ]);
-  expect(lookup("company").buildInput("docs.example.com")).toEqual({ domain: "example.com" });
+  expect(lookup("company").buildInput("docs.example.com", DEFAULT_MARKET)).toEqual({
+    domain: "example.com",
+  });
 });
 
 it("needs a company name to count as a result", () => {

@@ -25,7 +25,7 @@ const initial = (): Record<ReportId, ResultState> =>
   ) as Record<ReportId, ResultState>;
 
 /** Own result state above the tabs so navigation cannot interrupt a request. */
-export function useReport(domain: string, hasKey: boolean) {
+export function useReport(domain: string, hasKey: boolean, market: string) {
   const [results, setResults] = useState(initial);
   const alive = useRef(true);
   const activeRuns = useRef(new Set<ReportId>());
@@ -46,7 +46,7 @@ export function useReport(domain: string, hasKey: boolean) {
             const entry = (await chrome.runtime.sendMessage(
               id === "traffic"
                 ? { type: "openseo:peek-traffic", domain }
-                : { type: "openseo:peek", lookup: id, domain },
+                : { type: "openseo:peek", lookup: id, domain, market },
             )) as PanelEntry | null;
             if (!live) return;
             if (waiting.current.has(id)) {
@@ -54,6 +54,7 @@ export function useReport(domain: string, hasKey: boolean) {
                 type: "openseo:report-state",
                 lookup: id,
                 domain,
+                market,
               })) as ReportState | null;
               if (!live) return;
               if (!status) throw new Error("Request status unavailable");
@@ -125,7 +126,7 @@ export function useReport(domain: string, hasKey: boolean) {
       clearInterval(tick);
       chrome.storage.onChanged.removeListener(changed);
     };
-  }, [domain, patch]);
+  }, [domain, market, patch]);
 
   const run = async (id: ReportId, force = false) => {
     const current = results[id];
@@ -146,6 +147,7 @@ export function useReport(domain: string, hasKey: boolean) {
         lookup: id,
         domain,
         force,
+        market,
       })) as RunResult | TrafficResult;
       if (!reply) throw new Error("Request interrupted");
       if (reply.ok || "empty" in reply) {

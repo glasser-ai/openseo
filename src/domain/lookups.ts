@@ -1,3 +1,4 @@
+import { COUNTRIES, countryOf, type Market, placeOf } from "./markets.js";
 import { registrableDomain } from "./site.js";
 
 /**
@@ -46,6 +47,9 @@ export type KeywordRow = {
    * fields, so both are optional.
    */
   readonly traffic?: number | null;
+  /** Set only in an all-countries answer: the country whose figures the row
+      shows. */
+  readonly country?: string;
   /** Cost per click for the keyword, as a read on what it is worth. */
   readonly cpc?: number | null;
 };
@@ -60,7 +64,14 @@ export type Lookup = {
   readonly provider: string;
   readonly endpoint: string;
   readonly attribution: { readonly label: string; readonly href: string } | null;
-  readonly buildInput: (domain: string) => unknown;
+  /** The market only matters to lookups with byMarket; the rest ignore it. */
+  readonly buildInput: (domain: string, market: Market) => unknown;
+  /** The answer depends on the country chosen for Search, so the card names it
+      and the cache holds one copy per country. */
+  readonly byMarket?: boolean;
+  /** The Provider answers for all countries at once. Without it, all
+      countries reads one fallback country (see countryOf). */
+  readonly worldwide?: boolean;
   readonly extractKeywords?: (output: unknown) => readonly KeywordRow[];
   /** A month-by-month series drawn under the figures, oldest first. */
   readonly extractSeries?: (output: unknown) => readonly SeriesPoint[];
@@ -73,6 +84,10 @@ export type Lookup = {
   readonly layout?: "figures" | "facts";
   readonly extract: (output: unknown) => readonly LookupField[];
 };
+
+/** The market a lookup actually reads, which the card names. */
+export const marketFor = (lookup: Lookup, market: Market): Market =>
+  lookup.worldwide ? market : countryOf(market);
 
 export const LOOKUPS: readonly Lookup[] = [
   {
@@ -101,7 +116,9 @@ export const LOOKUPS: readonly Lookup[] = [
     // The input is **a flat object**, not DataForSEO's task array — the Adapter
     // does the wrapping. Sending an array is rejected by the contract outright:
     // validation_failed / Expected object at ["input"].
-    buildInput: (domain) => ({ targets: [domain], location_code: 2840, language_code: "en" }),
+    byMarket: true,
+    worldwide: true,
+    buildInput: (domain, market) => ({ targets: [domain], ...placeOf(market) }),
     /**
      * Measured 2026-09-15: tasks[].result[].items[] holds
      * {target, metrics:{organic:{etv,count}, paid:{etv,count}, …}}.
@@ -130,12 +147,9 @@ export const LOOKUPS: readonly Lookup[] = [
     provider: "dataforseo",
     endpoint: "/v3/dataforseo_labs/google/ranked_keywords/live",
     attribution: { label: "Data by DataForSEO", href: "https://dataforseo.com/" },
-    buildInput: (domain) => ({
-      target: domain,
-      location_code: 2840,
-      language_code: "en",
-      limit: 25,
-    }),
+    byMarket: true,
+    worldwide: true,
+    buildInput: (domain, market) => ({ target: domain, ...placeOf(market), limit: 25 }),
     extractKeywords: extractKeywords,
     extract: (output) =>
       extractKeywords(output).map((row) => ({
@@ -175,15 +189,16 @@ export const LOOKUPS: readonly Lookup[] = [
     id: "traffic-history",
     title: "Search traffic, 12 months",
     blurb:
-      "Estimated monthly visits from Google search in the US over the last twelve months, as Semrush models them — a trend, not a visit count.",
+      "Estimated monthly visits from Google search in the chosen country over the last twelve months, as Semrush models them — a trend, not a visit count.",
     provider: "semrush",
     endpoint: "/?type=domain_rank_history",
     attribution: { label: "Data by Semrush", href: "https://www.semrush.com/" },
     // Semrush keys on the bare domain. One charge per month returned, so the
     // limit is the bill: 12 rows at $0.00055.
-    buildInput: (domain) => ({
+    byMarket: true,
+    buildInput: (domain, market) => ({
       domain: registrableDomain(domain),
-      database: "us",
+      database: countryOf(market).id,
       display_limit: 12,
     }),
     /**
@@ -505,11 +520,28 @@ function plain(value: unknown): string {
 }
 
 /** Preserve numeric keyword data; older cached fields remain readable. */
+/**
+ * An all-countries answer lists a keyword once per country (measured
+ * 2026-10-29: "anthropic ai assistant" three times, with 14,800, 1,900 and 110
+ * searches). Each keyword is one row: the country where it brings the most
+ * traffic, named under the keyword. The figures are **not** added up: the
+ * limit cuts the list at 25 rows, so the other countries are a sample, and a
+ * sum of them would read as a worldwide total it is not.
+ */
 export function extractKeywords(output: unknown): readonly KeywordRow[] {
-  const rows: KeywordRow[] = [];
+  const num = (value: unknown): number | null =>
+    typeof value === "number" && Number.isFinite(value) ? value : null;
+  const worldwide = walkResults(output).some(
+    (result) => "location_code" in result && result["location_code"] === null,
+  );
+  const rows = new Map<string, KeywordRow>();
   for (const item of walk(output)) {
     const data = item["keyword_data"] as
-      | { keyword?: unknown; keyword_info?: { search_volume?: unknown; cpc?: unknown } }
+      | {
+          keyword?: unknown;
+          location_code?: unknown;
+          keyword_info?: { search_volume?: unknown; cpc?: unknown };
+        }
       | undefined;
     const serp = item["ranked_serp_element"] as
       | { serp_item?: { rank_absolute?: unknown; etv?: unknown } }
@@ -521,17 +553,33 @@ export function extractKeywords(output: unknown): readonly KeywordRow[] {
       !Number.isFinite(position)
     )
       continue;
-    const volume = data.keyword_info?.search_volume;
-    const num = (value: unknown): number | null =>
-      typeof value === "number" && Number.isFinite(value) ? value : null;
-    rows.push({
+    const row: KeywordRow = {
       keyword: data.keyword,
       position,
-      monthlyVolume: num(volume),
+      monthlyVolume: num(data.keyword_info?.search_volume),
       traffic: num(serp?.serp_item?.etv),
       cpc: num(data.keyword_info?.cpc),
-    });
-    if (rows.length === 25) break;
+      ...(worldwide ? { country: countryName(data.location_code) } : {}),
+    };
+    const seen = rows.get(row.keyword);
+    if (seen ? (row.traffic ?? -1) > (seen.traffic ?? -1) : rows.size < 25)
+      rows.set(row.keyword, row);
   }
-  return rows;
+  return [...rows.values()];
+}
+
+/** DataForSEO location codes are 2000 plus the ISO 3166 numeric code. */
+function countryName(code: unknown): string {
+  return COUNTRIES.find((country) => country.locationCode === code)?.name ?? "Another country";
+}
+
+function walkResults(output: unknown): Record<string, unknown>[] {
+  const tasks = (output as { tasks?: unknown } | null)?.tasks;
+  if (!Array.isArray(tasks)) return [];
+  return tasks.flatMap((task) => {
+    const result = (task as { result?: unknown } | null)?.result;
+    return Array.isArray(result)
+      ? result.filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+      : [];
+  });
 }

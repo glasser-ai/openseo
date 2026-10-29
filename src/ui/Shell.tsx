@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_MARKET, type Market, marketOf } from "../domain/markets.js";
 import type { Tab } from "./navigation.js";
 import { Report } from "./Report.jsx";
 import { SettingsView } from "./SettingsView.jsx";
@@ -46,6 +47,10 @@ export function Shell() {
   const [tab, setTab] = useState<Tab>("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [connection, setConnection] = useState<{ hasKey: boolean; revision: number } | null>(null);
+  // Not stored: every panel opens on all countries, and a country is a detail
+  // looked at for this panel only.
+  const [market, setMarket] = useState<Market>(DEFAULT_MARKET);
+  const chooseMarket = useCallback((id: string) => setMarket(marketOf(id)), []);
   const scroll = useRef<HTMLDivElement>(null);
   const unavailable = new URLSearchParams(location.search).has("unavailable");
   const close = () => {
@@ -141,8 +146,10 @@ export function Shell() {
         </IconButton>
       </header>
       <ReportWorkspace
-        key={`${domain}:${connection?.revision ?? 0}`}
+        key={`${domain}:${connection?.revision ?? 0}:${market.id}`}
         domain={domain}
+        market={market}
+        onMarket={chooseMarket}
         state={state}
         connection={connection}
         unavailable={unavailable}
@@ -160,9 +167,12 @@ export function Shell() {
   );
 }
 
-/** Reset results and in-flight callbacks together when the domain or Key changes. */
+/** Reset results and in-flight callbacks together when the domain, Key or
+    Search country changes. */
 function ReportWorkspace({
   domain,
+  market,
+  onMarket,
   state,
   connection,
   unavailable,
@@ -174,6 +184,8 @@ function ReportWorkspace({
   close,
 }: {
   readonly domain: string;
+  readonly market: Market;
+  readonly onMarket: (id: string) => void;
   readonly state: SiteState;
   readonly connection: { hasKey: boolean; revision: number } | null;
   readonly unavailable: boolean;
@@ -184,7 +196,7 @@ function ReportWorkspace({
   readonly onSettings: () => void;
   readonly close: () => void;
 }) {
-  const report = useReport(domain, connection?.hasKey === true);
+  const report = useReport(domain, connection?.hasKey === true, market.id);
   return (
     <div className="report-workspace flex min-h-0 flex-1">
       <Sidebar tab={tab} onTab={select} settingsOpen={settingsOpen} onSettings={onSettings} />
@@ -227,6 +239,8 @@ function ReportWorkspace({
             onSettings={onSettings}
             domain={state.host}
             hasKey={connection.hasKey}
+            market={market}
+            onMarket={onMarket}
             tab={tab}
             onTab={select}
           />
