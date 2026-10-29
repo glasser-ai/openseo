@@ -24,7 +24,7 @@ covered by [glasser's privacy policy](https://glasser.ai/privacy-policy/). The e
 remote fonts or favicons and includes no analytics, telemetry or crash reporting.
 
 External links open only when selected. They include glasser Keys and Run pages, Provider
-attribution, keyword-result URLs and context-menu tools. Those sites receive normal browser
+attribution, keyword-result URLs, competitor sites, top pages and context-menu tools. Those sites receive normal browser
 requests and apply their own policies. The Keys link includes UTM parameters that identify
 OpenSEO and the link location; it does not include your Key or the inspected domain.
 

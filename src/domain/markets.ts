@@ -53,7 +53,8 @@ export const MARKETS: readonly Market[] = [WORLDWIDE, ...COUNTRIES];
 
 export const DEFAULT_MARKET: Market = WORLDWIDE;
 
-/** Where a report reads one country only, such as Semrush's history, all
+/** Where a report reads one country only — Semrush's history, DataForSEO's
+    competitors (40501 Invalid Field: 'location_name' without one) — all
     countries reads as the United States, and the card says so. */
 export const FALLBACK_COUNTRY = COUNTRIES[0] as Country;
 

@@ -18,6 +18,7 @@ import { Meter, MonthlyLine } from "./charts.jsx";
 import { KeywordTable } from "./KeywordTable.jsx";
 import type { Tab } from "./navigation.js";
 import { TONE_TEXT } from "./palette.js";
+import { RankedTable } from "./RankedTable.jsx";
 import { Registration } from "./Registration.jsx";
 import { Traffic } from "./Traffic.jsx";
 import type { ReportId, ResultState, useReport } from "./useReport.js";
@@ -46,7 +47,12 @@ const SECTIONS: Record<Tab, { readonly title: string; readonly ids: readonly Rep
     ids: ["domain-rating", "traffic", "organic-traffic", "backlinks", "ranked-keywords"],
   },
   traffic: { title: "Traffic", ids: ["traffic"] },
-  search: { title: "Search", ids: ["organic-traffic", "traffic-history", "ranked-keywords"] },
+  // Competitors and top pages cost about $0.013 each at their limit of 10, so
+  // they come with the section rather than behind a second click.
+  search: {
+    title: "Search",
+    ids: ["organic-traffic", "traffic-history", "ranked-keywords", "competitors", "top-pages"],
+  },
   // AI citations cost $0.132, more than the rest of the overview together, so
   // they are bought only when someone opens this section.
   ai: { title: "AI search", ids: ["ai-citations"] },
@@ -217,6 +223,7 @@ export function Report({
         <Panel
           key={id}
           id={id}
+          domain={domain}
           market={marketLabel(id, market)}
           hasKey={hasKey}
           state={results[id]}
@@ -308,6 +315,8 @@ const TAB_OF: Record<ReportId, Tab> = {
   "organic-traffic": "search",
   "ranked-keywords": "search",
   "traffic-history": "search",
+  competitors: "search",
+  "top-pages": "search",
   "ai-citations": "ai",
   company: "site",
   technologies: "site",
@@ -652,12 +661,14 @@ function useLongWait(busy: boolean): boolean {
 
 function Panel({
   id,
+  domain,
   market,
   hasKey,
   state,
   onRun,
 }: {
   readonly id: ReportId;
+  readonly domain: string;
   /** Set only for reports the market changes. */
   readonly market: string | null;
   readonly hasKey: boolean;
@@ -706,6 +717,8 @@ function Panel({
             rows={payload.fields}
             {...(payload.keywords ? { keywords: payload.keywords } : {})}
           />
+        ) : (id === "competitors" || id === "top-pages") && payload.ranked ? (
+          <RankedTable kind={id} rows={payload.ranked} domain={domain} />
         ) : id === "ai-citations" ? (
           <AiCitations fields={payload.fields} />
         ) : layoutOf(id) === "facts" ? (

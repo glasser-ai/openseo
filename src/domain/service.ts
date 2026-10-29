@@ -11,6 +11,7 @@ import {
   LOOKUPS,
   type LookupField,
   type LookupId,
+  type RankedRow,
   type SeriesPoint,
 } from "./lookups.js";
 import { marketOf } from "./markets.js";
@@ -59,6 +60,7 @@ export type RunResult =
       readonly fields: readonly LookupField[];
       readonly keywords?: readonly KeywordRow[];
       readonly series?: readonly SeriesPoint[];
+      readonly ranked?: readonly RankedRow[];
       readonly runUrl: string;
       readonly chargeUsd: string | null;
       /** This copy came from the cache and cost nothing. */
@@ -313,6 +315,7 @@ async function runLookupOnce(
         fields: cached.payload.fields,
         ...(cached.payload.keywords ? { keywords: cached.payload.keywords } : {}),
         ...(cached.payload.series ? { series: cached.payload.series } : {}),
+        ...(cached.payload.ranked ? { ranked: cached.payload.ranked } : {}),
         runUrl: cached.runUrl,
         chargeUsd: cached.chargeUsd,
         cached: true,
@@ -350,6 +353,7 @@ async function runLookupOnce(
   let fields: readonly LookupField[] = [];
   let keywords: readonly KeywordRow[] | undefined;
   let series: readonly SeriesPoint[] | undefined;
+  let ranked: readonly RankedRow[] | undefined;
   let runUrl = "";
   let chargeUsd: string | null = null;
 
@@ -371,6 +375,7 @@ async function runLookupOnce(
       fields = lookup.extract(run.output);
       keywords = lookup.extractKeywords?.(run.output);
       series = lookup.extractSeries?.(run.output);
+      ranked = lookup.extractRanked?.(run.output);
       runUrl = run.run_url;
       chargeUsd = run.charge_usd;
     },
@@ -414,6 +419,7 @@ async function runLookupOnce(
     fields,
     ...(keywords ? { keywords } : {}),
     ...(series?.length ? { series } : {}),
+    ...(ranked ? { ranked } : {}),
     runUrl,
     chargeUsd,
     cached: false,

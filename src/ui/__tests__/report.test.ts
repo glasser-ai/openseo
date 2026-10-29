@@ -398,11 +398,13 @@ it("starts Search on all countries and sends the market with each lookup", async
   expect(select.value).toBe("all");
   expect(container.textContent).toContain("All countries");
   expect(container.textContent).toContain("United States only");
+  expect(container.textContent).toContain("Search competitors");
+  expect(container.textContent).toContain("Top pages");
   const lookups = send.mock.calls
     .map(([message]) => message)
     .filter((message) => message.type === "openseo:lookup");
   expect(lookups.map((message) => message.lookup)).toEqual(
-    expect.arrayContaining(["organic-traffic", "ranked-keywords", "traffic-history"]),
+    expect.arrayContaining(["competitors", "top-pages", "organic-traffic"]),
   );
   expect(lookups.every((message) => message.market === "all")).toBe(true);
   await act(async () => {

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { LOOKUPS, type LookupId, marketFor } from "../lookups.js";
+import { extractCompetitors, extractPages, LOOKUPS, type LookupId, marketFor } from "../lookups.js";
 import { DEFAULT_MARKET, MARKETS, marketOf, WORLDWIDE } from "../markets.js";
 
 const lookup = (id: LookupId) => LOOKUPS.find((item) => item.id === id)!;
@@ -32,9 +32,9 @@ it("builds the same US input as before markets existed", () => {
   });
 });
 
-/* Measured 2026-10-29: DataForSEO Labs answered traffic and ranked keywords
-   with no location (location_code null). Semrush history has no all-countries
-   database. */
+/* Measured 2026-10-29: DataForSEO Labs answered traffic, ranked keywords and
+   relevant pages with no location (location_code null); competitors refused
+   it with 40501, and Semrush history has no all-countries database. */
 it("sends no location for all countries where the Provider reads every country", () => {
   expect(lookup("organic-traffic").buildInput("example.com", WORLDWIDE)).toEqual({
     targets: ["example.com"],
@@ -42,6 +42,11 @@ it("sends no location for all countries where the Provider reads every country",
   expect(lookup("ranked-keywords").buildInput("example.com", WORLDWIDE)).toEqual({
     target: "example.com",
     limit: 25,
+  });
+  expect(lookup("top-pages").buildInput("example.com", WORLDWIDE)).toEqual({
+    target: "example.com",
+    order_by: ["metrics.organic.etv,desc"],
+    limit: 10,
   });
 });
 
@@ -51,8 +56,9 @@ it("reads the fallback country, and says so, where there is no worldwide answer"
     expect(item.buildInput("example.com", WORLDWIDE)).toEqual(item.buildInput("example.com", read));
     expect(read === WORLDWIDE).toBe(item.worldwide === true);
   }
+  expect(marketFor(lookup("competitors"), WORLDWIDE)).toBe(us);
   expect(marketFor(lookup("traffic-history"), WORLDWIDE)).toBe(us);
-  expect(marketFor(lookup("traffic-history"), brazil)).toBe(brazil);
+  expect(marketFor(lookup("competitors"), brazil)).toBe(brazil);
 });
 
 it("reads another country's Google with that country's language", () => {
@@ -63,6 +69,20 @@ it("reads another country's Google with that country's language", () => {
   });
   expect(lookup("traffic-history").buildInput("example.com", brazil)).toMatchObject({
     database: "br",
+  });
+  expect(lookup("competitors").buildInput("example.com", brazil)).toEqual({
+    target: "example.com",
+    location_code: 2076,
+    language_code: "pt",
+    exclude_top_domains: true,
+    limit: 10,
+  });
+  expect(lookup("top-pages").buildInput("example.com", brazil)).toEqual({
+    target: "example.com",
+    location_code: 2076,
+    language_code: "pt",
+    order_by: ["metrics.organic.etv,desc"],
+    limit: 10,
   });
 });
 
@@ -77,6 +97,65 @@ it("keeps one input for reports that do not depend on the country", () => {
 it("reads an unknown market id as the default", () => {
   expect(marketOf(undefined)).toBe(DEFAULT_MARKET);
   expect(new Set(MARKETS.map((market) => market.id)).size).toBe(MARKETS.length);
+});
+
+const organic = (etv: number, count: number) => ({ organic: { etv, count } });
+
+it("lists competitors without the target itself", () => {
+  const output = {
+    tasks: [
+      {
+        result: [
+          {
+            target: "example.com",
+            items: [
+              {
+                domain: "example.com",
+                intersections: 900,
+                metrics: organic(300, 900),
+                full_domain_metrics: organic(300, 900),
+              },
+              {
+                domain: "rival.com",
+                intersections: 120,
+                metrics: organic(40, 120),
+                full_domain_metrics: organic(52_000, 8_000),
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  expect(extractCompetitors(output)).toEqual([
+    { name: "rival.com", visits: 52_000, keywords: 120 },
+  ]);
+  expect(lookup("competitors").extract(output)).toEqual([
+    { label: "rival.com", value: "120 shared keywords" },
+  ]);
+});
+
+it("lists pages in the order the input asked for", () => {
+  const output = {
+    tasks: [
+      {
+        result: [
+          {
+            target: "example.com",
+            items: [
+              { page_address: "https://example.com/", metrics: organic(2_468, 53) },
+              { page_address: "https://example.com/tools", metrics: organic(1_822, 615) },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  expect(extractPages(output)).toEqual([
+    { name: "https://example.com/", visits: 2_468, keywords: 53 },
+    { name: "https://example.com/tools", visits: 1_822, keywords: 615 },
+  ]);
+  expect(lookup("top-pages").extract({ tasks: [{ result: [{ items: [] }] }] })).toEqual([]);
 });
 
 /* Measured 2026-10-29: an all-countries answer repeats a keyword once per

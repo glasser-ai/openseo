@@ -160,6 +160,7 @@ export function useReport(domain: string, hasKey: boolean, market: string) {
                 fields: reply.fields,
                 ...(reply.keywords ? { keywords: reply.keywords } : {}),
                 ...(reply.series ? { series: reply.series } : {}),
+                ...(reply.ranked ? { ranked: reply.ranked } : {}),
               };
         patch(id, {
           entry: {

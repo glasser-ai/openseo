@@ -16,6 +16,8 @@ export const REPORT_TITLE = {
   "organic-traffic": "Organic search",
   "ranked-keywords": "Ranking keywords",
   "traffic-history": "Search traffic, 12 months",
+  competitors: "Search competitors",
+  "top-pages": "Top pages",
   "ai-citations": "AI search citations",
   company: "Company",
   technologies: "Technologies",
@@ -27,6 +29,8 @@ export type LookupId =
   | "ranked-keywords"
   | "backlinks"
   | "traffic-history"
+  | "competitors"
+  | "top-pages"
   | "ai-citations"
   | "company"
   | "technologies";
@@ -54,6 +58,20 @@ export type KeywordRow = {
   readonly cpc?: number | null;
 };
 
+/**
+ * One row of a ranked list: a competing domain, or one of the domain's pages.
+ * Both lists answer "where does the search traffic go", so they share a shape
+ * and one table draws them.
+ */
+export type RankedRow = {
+  /** A domain, or a page's URL. */
+  readonly name: string;
+  /** Estimated monthly visits from Google search. */
+  readonly visits: number | null;
+  /** Shared keywords for a competitor; ranking keywords for a page. */
+  readonly keywords: number | null;
+};
+
 export type LookupField = { readonly label: string; readonly value: string };
 
 export type Lookup = {
@@ -75,6 +93,7 @@ export type Lookup = {
   readonly extractKeywords?: (output: unknown) => readonly KeywordRow[];
   /** A month-by-month series drawn under the figures, oldest first. */
   readonly extractSeries?: (output: unknown) => readonly SeriesPoint[];
+  readonly extractRanked?: (output: unknown) => readonly RankedRow[];
   /**
    * How the card lays the fields out. "figures" is the default: each field a
    * lead number with a caption. "facts" is a label and value list for text
@@ -226,6 +245,64 @@ export const LOOKUPS: readonly Lookup[] = [
       semrushMonths(output)
         .map((month) => ({ date: month.date, visits: month.organic }))
         .reverse(),
+  },
+  {
+    id: "competitors",
+    title: "Search competitors",
+    blurb:
+      "Domains that rank for the same Google keywords, by how many they share. Very large general sites are left out.",
+    provider: "dataforseo",
+    endpoint: "/v3/dataforseo_labs/google/competitors_domain/live",
+    attribution: { label: "Data by DataForSEO", href: "https://dataforseo.com/" },
+    byMarket: true,
+    /**
+     * Measured 2026-10-29 on dataforseo.com: without exclude_top_domains the
+     * list was youtube, facebook, reddit, linkedin — every site shares keywords
+     * with them, so they say nothing. With it, semrush, ahrefs and similarweb
+     * came up. The limit of 10 keeps the call at the base charge ($0.0132).
+     */
+    buildInput: (domain, market) => ({
+      target: domain,
+      location_code: countryOf(market).locationCode,
+      language_code: countryOf(market).languageCode,
+      exclude_top_domains: true,
+      limit: 10,
+    }),
+    extractRanked: (output) => extractCompetitors(output),
+    extract: (output) =>
+      extractCompetitors(output).map((row) => ({
+        label: row.name,
+        value: `${compact(row.keywords)} shared keywords`,
+      })),
+  },
+  {
+    id: "top-pages",
+    title: "Top pages",
+    blurb:
+      "The domain's pages that bring the most estimated Google search visits, with how many keywords each ranks for.",
+    provider: "dataforseo",
+    endpoint: "/v3/dataforseo_labs/google/relevant_pages/live",
+    attribution: { label: "Data by DataForSEO", href: "https://dataforseo.com/" },
+    byMarket: true,
+    worldwide: true,
+    /**
+     * Measured 2026-10-29: the default order is by keyword count, which put a
+     * page with 615 keywords and 1.8K visits above the home page with 2.5K.
+     * Ordering by etv makes these the top pages by traffic, not a re-sort of
+     * the Provider's first ten.
+     */
+    buildInput: (domain, market) => ({
+      target: domain,
+      ...placeOf(market),
+      order_by: ["metrics.organic.etv,desc"],
+      limit: 10,
+    }),
+    extractRanked: (output) => extractPages(output),
+    extract: (output) =>
+      extractPages(output).map((row) => ({
+        label: row.name,
+        value: `${compact(row.visits)} visits / month`,
+      })),
   },
   {
     id: "ai-citations",
@@ -517,6 +594,60 @@ function compact(value: unknown): string {
 
 function plain(value: unknown): string {
   return typeof value === "number" ? String(value) : "—";
+}
+
+/**
+ * Measured 2026-10-29: tasks[].result[].items[] holds {domain, intersections,
+ * avg_position, metrics:{organic:{etv,count}}, full_domain_metrics:{…}}.
+ * metrics counts only the keywords shared with the target;
+ * full_domain_metrics is the competitor's whole site. The first item is the
+ * target itself, which is not its own competitor.
+ */
+export function extractCompetitors(output: unknown): readonly RankedRow[] {
+  const target = resultTarget(output);
+  const rows: RankedRow[] = [];
+  for (const item of walk(output)) {
+    const domain = item["domain"];
+    if (typeof domain !== "string" || item["intersections"] === undefined) continue;
+    if (domain === target) continue;
+    const full = item["full_domain_metrics"] as Record<string, unknown> | undefined;
+    const organic = full?.["organic"] as Record<string, unknown> | undefined;
+    rows.push({
+      name: domain,
+      visits: finite(organic?.["etv"]),
+      keywords: finite(item["intersections"]),
+    });
+  }
+  return rows;
+}
+
+/** Measured 2026-10-29: items[] holds {page_address, metrics:{organic:{etv,
+    count}}}, in the order the input asked for. */
+export function extractPages(output: unknown): readonly RankedRow[] {
+  const rows: RankedRow[] = [];
+  for (const item of walk(output)) {
+    const page = item["page_address"];
+    if (typeof page !== "string") continue;
+    const metrics = item["metrics"] as Record<string, unknown> | undefined;
+    const organic = metrics?.["organic"] as Record<string, unknown> | undefined;
+    rows.push({
+      name: page,
+      visits: finite(organic?.["etv"]),
+      keywords: finite(organic?.["count"]),
+    });
+  }
+  return rows;
+}
+
+function resultTarget(output: unknown): string | null {
+  for (const item of walk(output)) {
+    if (typeof item["target"] === "string" && Array.isArray(item["items"])) return item["target"];
+  }
+  return null;
+}
+
+function finite(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 /** Preserve numeric keyword data; older cached fields remain readable. */
