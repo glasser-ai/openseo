@@ -90,7 +90,28 @@ export async function scanPage(): Promise<PageFacts> {
       robots = { kind: "unreadable", reason: `HTTP ${response.status}` };
     }
   } catch (error) {
-    robots = { kind: "unreadable", reason: error instanceof Error ? error.message : "no answer" };
+    // A throw is the browser refusing, not the server failing — most often a
+    // redirect to another origin without CORS. Ask again without following
+    // redirects to tell the two apart. An opaque redirect hides its target, so
+    // it may also be a same-origin loop: the result says only that it redirects.
+    const reason = error instanceof Error ? error.message : "no answer";
+    // Our own timeout means the server stalled, which Google treats as a
+    // failure too; only a refusal by the browser is "not checked".
+    robots = controller.signal.aborted
+      ? { kind: "unreadable", reason }
+      : { kind: "unchecked", reason };
+    if (!controller.signal.aborted)
+      try {
+        const probe = await fetch(new URL("/robots.txt", location.origin).href, {
+          signal: controller.signal,
+          credentials: "omit",
+          cache: "no-cache",
+          redirect: "manual",
+        });
+        if (probe.type === "opaqueredirect") robots = { kind: "redirected" };
+      } catch {
+        // Keep the first reason.
+      }
   } finally {
     clearTimeout(timer);
   }
@@ -136,28 +157,42 @@ export function indexing(facts: PageFacts): { verdict: Check; checks: readonly C
   const robots = robotsFor(facts.robots);
   const path = pathOf(facts.url);
   const crawl: Check =
-    robots === null
+    facts.robots.kind === "redirected"
       ? {
           label: "robots.txt",
-          value: "Unreadable",
-          tone: "warn",
-          note: `Google pauses crawling while robots.txt fails (${facts.robots.kind === "unreadable" ? facts.robots.reason : ""}).`,
+          value: "Not checked",
+          tone: "neutral",
+          note: "It redirects, and OpenSEO could not follow the redirect from here. Google follows up to five robots.txt redirects.",
         }
-      : isAllowed(robots, "Googlebot", path)
+      : facts.robots.kind === "unchecked"
         ? {
             label: "robots.txt",
-            value: "Googlebot allowed",
-            tone: "good",
-            ...(facts.robots.kind === "missing"
-              ? { note: "No robots.txt, so nothing is blocked." }
-              : {}),
+            value: "Not checked",
+            tone: "neutral",
+            note: `The browser could not fetch it (${facts.robots.reason}). This says nothing about Google.`,
           }
-        : {
-            label: "robots.txt",
-            value: "Googlebot blocked",
-            tone: "bad",
-            note: "Google cannot crawl this page.",
-          };
+        : robots === null
+          ? {
+              label: "robots.txt",
+              value: "Unreadable",
+              tone: "warn",
+              note: `Google pauses crawling while robots.txt fails (${facts.robots.kind === "unreadable" ? facts.robots.reason : ""}).`,
+            }
+          : isAllowed(robots, "Googlebot", path)
+            ? {
+                label: "robots.txt",
+                value: "Googlebot allowed",
+                tone: "good",
+                ...(facts.robots.kind === "missing"
+                  ? { note: "No robots.txt, so nothing is blocked." }
+                  : {}),
+              }
+            : {
+                label: "robots.txt",
+                value: "Googlebot blocked",
+                tone: "bad",
+                note: "Google cannot crawl this page.",
+              };
   const noindex = /\b(noindex|none)\b/.test(facts.metaRobots);
   const meta: Check = noindex
     ? {
@@ -197,7 +232,11 @@ export function indexing(facts: PageFacts): { verdict: Check; checks: readonly C
       ? { label: "Indexing", value: "Not indexable", tone: "bad" }
       : checks.some((check) => check.tone === "warn")
         ? { label: "Indexing", value: "Check the notes", tone: "warn" }
-        : { label: "Indexing", value: "Indexable", tone: "good" };
+        : // robots.txt could not be checked, so crawl access is unknown and the
+          // page cannot be called indexable.
+          crawl.tone === "neutral"
+          ? { label: "Indexing", value: "Unknown", tone: "neutral" }
+          : { label: "Indexing", value: "Indexable", tone: "good" };
   return { verdict, checks };
 }
 
@@ -365,4 +404,10 @@ function sameUrl(a: string, b: string): boolean {
     }
   };
   return clean(a) === clean(b);
+}
+
+/** The page in words: a bare "/" read as stray punctuation next to "· free". */
+export function pageName(url: string): string {
+  const path = pathOf(url);
+  return path === "/" ? "home page" : path;
 }

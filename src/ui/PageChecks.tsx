@@ -1,4 +1,4 @@
-import { type Check, indexing, onPage, pathOf } from "../domain/page.js";
+import { type Check, indexing, onPage, pageName } from "../domain/page.js";
 import { TONE_TEXT } from "./palette.js";
 import type { PageScan } from "./usePage.js";
 
@@ -7,7 +7,7 @@ import type { PageScan } from "./usePage.js";
 export function PageChecks({ scan }: { readonly scan: PageScan }) {
   if (scan.kind !== "ok") return <ScanState scan={scan} title="This page" />;
   const { verdict, checks } = indexing(scan.facts);
-  const path = pathOf(scan.facts.url);
+  const path = pageName(scan.facts.url);
   return (
     <>
       <section className="report-card">

@@ -181,3 +181,28 @@ it("sends no credentials or tracking tags from the canonical", () => {
     url: "https://example.com/?q=a%20b",
   });
 });
+
+it("tells a robots.txt that redirects from one that fails", async () => {
+  // www.wikipedia.org/robots.txt redirects to en.wikipedia.org, which sends no
+  // CORS header: the followed fetch throws, the manual one sees the redirect.
+  vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+    if (init.redirect === "manual") return { type: "opaqueredirect", ok: false, status: 0 };
+    throw new TypeError("Failed to fetch");
+  });
+  expect((await scanPage()).robots).toEqual({ kind: "redirected" });
+});
+
+it("does not warn about Google when OpenSEO could not read robots.txt", () => {
+  const { verdict, checks } = indexing(facts({ robots: { kind: "redirected" } }));
+  expect(checks[0]).toMatchObject({ value: "Not checked", tone: "neutral" });
+  expect(checks[0]?.note).not.toContain("pauses crawling");
+  expect(verdict.value).not.toBe("Not indexable");
+});
+
+it.each([{ kind: "redirected" }, { kind: "unchecked", reason: "Failed to fetch" }] as const)(
+  "does not call a page indexable when robots.txt is $kind",
+  (robots) => {
+    const { verdict } = indexing(facts({ robots }));
+    expect(verdict).toMatchObject({ value: "Unknown", tone: "neutral" });
+  },
+);
