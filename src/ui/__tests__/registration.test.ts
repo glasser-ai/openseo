@@ -71,8 +71,8 @@ it("replaces the placeholder with the record, and keeps no pulse behind", async 
 
 /** A card saying "not found" is not worth the space, so the placeholder goes
     with it rather than hardening into an empty card. */
-it("drops the card entirely when the registry has no record", async () => {
+it("keeps the card and says why when the registry publishes no record", async () => {
   await render();
   await act(async () => answer({ kind: "unsupported" }));
-  expect(card()).toBeNull();
+  expect(card()?.textContent).toContain("registry publishes no registration dates");
 });
