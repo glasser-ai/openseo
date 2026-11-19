@@ -120,7 +120,14 @@ export const AI_CRAWLERS: readonly Crawler[] = [
 export type RobotsFile =
   | { readonly kind: "found"; readonly text: string }
   | { readonly kind: "missing"; readonly status: number }
-  | { readonly kind: "unreadable"; readonly reason: string };
+  | { readonly kind: "unreadable"; readonly reason: string }
+  /** The file redirects and OpenSEO could not follow it. The target is
+      unknown (an opaque redirect hides it): usually another origin that the
+      page's CORS rules stop OpenSEO from reading, possibly a redirect loop. */
+  | { readonly kind: "redirected" }
+  /** The browser could not fetch the file at all, so nothing is known about
+      what Google sees. Not a server failure. */
+  | { readonly kind: "unchecked"; readonly reason: string };
 
 /** null means the file gives no answer, so the card says so and does not guess. */
 export function robotsFor(file: RobotsFile): Robots | null {

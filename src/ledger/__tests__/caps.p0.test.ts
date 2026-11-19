@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_SETTINGS, getSettings, patchSettings } from "../store.js";
+import { capsRaised, DEFAULT_SETTINGS, getSettings, patchSettings, reserve } from "../store.js";
 
 /**
  * Changing a default does nothing for **an extension already installed**:
@@ -66,4 +66,25 @@ it("rejects invalid limits and serializes concurrent updates", async () => {
     patchSettings({ monthlyCapMicros: "456" }),
   ]);
   expect(await getSettings()).toMatchObject({ dailyCapMicros: "123", monthlyCapMicros: "456" });
+});
+
+describe("budget check", () => {
+  it("lets a free lookup through a $0 budget and stops a paid one", async () => {
+    store("0", "0");
+    expect(await reserve(0n)).toBe(true);
+    expect(await reserve(1n)).toBe(false);
+  });
+});
+
+describe("capsRaised", () => {
+  it("is true only when a cap goes up", () => {
+    expect(capsRaised({ dailyCapMicros: "100" }, { dailyCapMicros: "200" })).toBe(true);
+    expect(capsRaised({ monthlyCapMicros: "100" }, { monthlyCapMicros: "200" })).toBe(true);
+    expect(capsRaised({ dailyCapMicros: "200" }, { dailyCapMicros: "100" })).toBe(false);
+    expect(
+      capsRaised({ dailyCapMicros: "100" }, { dailyCapMicros: "100", ratingBadge: false }),
+    ).toBe(false);
+    // A first save that writes the defaults raises nothing.
+    expect(capsRaised(undefined, { ratingBadge: false })).toBe(false);
+  });
 });

@@ -85,8 +85,10 @@ it("turns the rows into an oldest-first monthly series", () => {
   ]);
 });
 
-it("asks Semrush about the registrable domain, twelve rows at most", () => {
-  expect(lookup("traffic-history").buildInput("docs.example.com", DEFAULT_MARKET)).toEqual({
+// The panel passes the site domain (see siteDomain), so Semrush reads it as is
+// and every card shares one scope.
+it("asks Semrush about the site domain it is given, twelve rows at most", () => {
+  expect(lookup("traffic-history").buildInput("example.com", DEFAULT_MARKET)).toEqual({
     domain: "example.com",
     database: "us",
     display_limit: 12,
@@ -177,7 +179,7 @@ it("reads every field Hunter fills for the company", () => {
     { label: "Technologies", value: "cloudflare, google-cloud-cdn, youtube" },
     { label: "Traffic level", value: "very low" },
   ]);
-  expect(lookup("company").buildInput("docs.example.com", DEFAULT_MARKET)).toEqual({
+  expect(lookup("company").buildInput("example.com", DEFAULT_MARKET)).toEqual({
     domain: "example.com",
   });
 });

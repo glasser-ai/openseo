@@ -181,7 +181,7 @@ export function Donut({
             y={size / 2}
             textAnchor="middle"
             dominantBaseline="central"
-            className="mono fill-foreground text-body font-semibold"
+            className="fill-foreground text-body font-semibold tabular-nums"
           >
             {percent(shown.find((slice) => slice.key === active)?.share ?? 0)}
           </text>
@@ -207,7 +207,7 @@ export function Donut({
             {/* Never truncated: colour is the redundant channel and this label
                 carries the identity. Cut it and nothing is left. */}
             <span className="min-w-0">{slice.label}</span>
-            <span className="mono ml-auto shrink-0 tabular-nums text-muted-foreground">
+            <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">
               {percent(slice.share)}
             </span>
           </li>
@@ -242,7 +242,7 @@ export function BarRows({
         <li key={row.key} className="-mx-1.5 rounded-sm px-1.5 py-0.5 hover:bg-muted">
           <div className="flex items-baseline gap-2.5 text-body">
             <span className="min-w-0">{row.label}</span>
-            <span className="mono ml-auto shrink-0 tabular-nums text-muted-foreground">
+            <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">
               {percent(row.share)}
             </span>
           </div>

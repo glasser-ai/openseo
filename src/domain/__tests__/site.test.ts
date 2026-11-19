@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { registrableDomain } from "../site.js";
+import { ratesThisSite, registrableDomain, siteDomain } from "../site.js";
 
 it.each([
   ["www.example.com.ng", "example.com.ng"],
@@ -12,4 +12,20 @@ it.each([
   ["localhost", "localhost"],
 ])("uses registry suffix rules for %s", (host, expected) => {
   expect(registrableDomain(host)).toBe(expected);
+});
+
+it.each([
+  ["www.wikipedia.org", "wikipedia.org"],
+  ["info.cern.ch", "cern.ch"],
+  ["example.com", "example.com"],
+  ["tenant.github.io", "tenant.github.io"],
+  ["WWW.Example.CO.UK.", "example.co.uk"],
+  ["localhost", "localhost"],
+])("reads %s as the site %s", (host, expected) => {
+  expect(siteDomain(host)).toBe(expected);
+});
+
+it("knows when a domain score describes the platform, not the site", () => {
+  expect(ratesThisSite("www.wikipedia.org")).toBe(true);
+  expect(ratesThisSite("tenant.github.io")).toBe(false);
 });

@@ -1,5 +1,5 @@
 import { COUNTRIES, countryOf, type Market, placeOf } from "./markets.js";
-import { registrableDomain } from "./site.js";
+import { siteDomain } from "./site.js";
 
 /**
  * **One** name per concept, shared by the panel and the settings page.
@@ -221,7 +221,8 @@ export const LOOKUPS: readonly Lookup[] = [
     // limit is the bill: 12 rows at $0.00055.
     byMarket: true,
     buildInput: (domain, market) => ({
-      domain: registrableDomain(domain),
+      // The panel passes the site domain already; Semrush reads it as is.
+      domain,
       database: countryOf(market).id,
       display_limit: 12,
     }),
@@ -381,7 +382,7 @@ export const LOOKUPS: readonly Lookup[] = [
     endpoint: "/v2/companies/find",
     attribution: { label: "Data by Hunter", href: "https://hunter.io/" },
     layout: "facts",
-    buildInput: (domain) => ({ domain: registrableDomain(domain) }),
+    buildInput: (domain) => ({ domain }),
     /**
      * Measured 2026-10-13 (dataforseo.com, surething.io): {data:{name,
      * legalName, description, location, foundedYear, companyType, phone,
@@ -642,7 +643,9 @@ export function extractCompetitors(output: unknown): readonly RankedRow[] {
   for (const item of walk(output)) {
     const domain = item["domain"];
     if (typeof domain !== "string" || item["intersections"] === undefined) continue;
-    if (domain === target) continue;
+    // The Provider can list the site under another host (wikipedia.org for
+    // www.wikipedia.org); it is still not its own competitor.
+    if (domain === target || (target && siteDomain(domain) === siteDomain(target))) continue;
     const full = item["full_domain_metrics"] as Record<string, unknown> | undefined;
     const organic = full?.["organic"] as Record<string, unknown> | undefined;
     rows.push({

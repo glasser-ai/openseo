@@ -21,6 +21,10 @@ glasser or any other service.
 
 Balance and price checks are free. After a Key is stored, opening a section automatically
 starts paid lookups for missing or outdated results after a local estimated-budget check.
+Viewing a new site in the front tab also starts a Domain Rating lookup, until you turn off
+**Look up new sites automatically** in Settings. It is free today; if glasser starts charging
+for it, it passes the same budget check. Lookups name the site's domain: `wikipedia.org` for
+a page on `www.wikipedia.org`, but `tenant.github.io` as itself.
 Recovery can continue for requests
 already sent, including after a budget is lowered. Removing the Key stops authenticated recovery
 until a Key is available again. A price change can cause actual charges to exceed the estimated
@@ -52,6 +56,7 @@ can remain stored after their freshness period ends; expiry controls reuse, not 
 | Permission | Purpose |
 | --- | --- |
 | `activeTab` and `scripting` | Read the selected tab address and insert the report after a toolbar, shortcut or context-menu action. The insertion script creates the report container and reads nothing. The Page and AI search sections run a second script in the same tab that reads only the facts listed above. |
+| `tabs` | Show the open site's Domain Rating on the toolbar icon. The extension reads each tab's address as it changes. While **Look up new sites automatically** is on (the default), a public site in the front tab of the focused window with no saved Domain Rating gets a lookup, free today, that sends the site's domain, never the full address, to `api.glasser.ai`. Intranet names, `localhost` and IP addresses are never sent. Turn that setting off and the badge reads the local cache only. Turn off **Show Domain Rating on the toolbar icon** and addresses are not read for the badge. |
 | `storage` | Store settings, Key, results and the local ledger. |
 | `contextMenus` | Provide right-click actions. |
 | `alarms` | Recover unfinished paid requests after worker suspension. |

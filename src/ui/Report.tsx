@@ -10,17 +10,21 @@ import {
   type SeriesPoint,
 } from "../domain/lookups.js";
 import { MARKETS, type Market } from "../domain/markets.js";
-import { type PageTarget, pathOf } from "../domain/page.js";
+import { type PageTarget, pageName } from "../domain/page.js";
+import type { ReportPrice } from "../domain/service.js";
+import { ratesThisSite, registrableDomain } from "../domain/site.js";
 import { type Metric, type Tone, toneOf } from "../domain/thresholds.js";
 import { compact, parseCompact } from "../domain/traffic.js";
 import { formatUsd, usdToMicros } from "../ledger/micros.js";
+import { BUDGET_REACHED } from "../ledger/store.js";
 import { AiCitations } from "./AiCitations.jsx";
 import { AiCrawlers } from "./AiCrawlers.jsx";
 import { Meter, MonthlyLine } from "./charts.jsx";
 import { KeywordTable } from "./KeywordTable.jsx";
 import type { Tab } from "./navigation.js";
 import { PageChecks } from "./PageChecks.jsx";
-import { TONE_TEXT } from "./palette.js";
+import { TONE_TEXT, TONE_WORD } from "./palette.js";
+import { ToneWord } from "./primitives.jsx";
 import { RankedTable } from "./RankedTable.jsx";
 import { Registration } from "./Registration.jsx";
 import { Traffic } from "./Traffic.jsx";
@@ -42,9 +46,9 @@ const SECTIONS: Record<Tab, { readonly title: string; readonly ids: readonly Rep
    * The panel is injected only by an explicit gesture (an action click, Alt+D
    * or the context menu; see mount.content.ts, which matches no page on its
    * own), so opening it **is** the request for the glance. That one gesture
-   * costs about $0.18 on a domain with nothing saved, and PANEL_TTL_MS then
-   * makes every reopen within 7 days free. Against the default $5/day that is
-   * roughly 28 new domains.
+   * costs about $0.07 on a domain with nothing saved (measured 2026-11-18 from
+   * inspect's typical prices), and PANEL_TTL_MS then makes every reopen within
+   * 7 days free. Against the default $5/day that is roughly 70 new domains.
    */
   overview: {
     title: "Overview",
@@ -101,7 +105,7 @@ export function Report({
   readonly fresh: boolean;
   readonly target: PageTarget | null;
 }) {
-  const { results, run } = report;
+  const { results, run, budgetEpoch } = report;
   const ids = SECTIONS[tab].ids;
   // The page's keywords wait for the scan's address, and are not bought for a
   // page that has none (see lookupTarget).
@@ -109,6 +113,7 @@ export function Report({
   const shown = ids.filter((id) => !PAGE_IDS.has(id) || page !== "");
 
   const overviewLong = useLongWait(ids.some((id) => results[id]?.running === true));
+  const prices = usePrices(ids, hasKey, { domain, page, market: market.id });
 
   // Read saved results first. Attempt each missing or outdated report only once
   // per domain; failures require an explicit retry. The worker checks budgets.
@@ -127,7 +132,9 @@ export function Report({
       if (state.entry !== null && !isOutdated(state.entry)) continue;
       // A page lookup is gated per page, so a new scan of a new address buys
       // that page once too.
-      const gate = PAGE_IDS.has(id) ? `${page}:${id}` : `${domain}:${id}`;
+      // The budget epoch is part of the gate: a new budget can admit what the
+      // old one stopped (see useReport).
+      const gate = `${PAGE_IDS.has(id) ? page : domain}:${id}:${budgetEpoch}`;
       if (fired.current.has(gate)) continue;
       fired.current.add(gate);
       void run(id);
@@ -152,7 +159,7 @@ export function Report({
           <ul className="m-0 mt-3 list-none p-0">
             {ids.map((id, index) => {
               const state = results[id];
-              const line = headline(id, state, hasKey);
+              const line = headline(id, state, hasKey, domain);
               // Without the market a UK number reads as the site's whole
               // search traffic, and a US-only one as worldwide.
               const where = marketLabel(id, market);
@@ -173,9 +180,16 @@ export function Report({
                     {line.busy ? (
                       <span className="h-5 w-16 shrink-0 animate-pulse rounded-sm bg-muted" />
                     ) : line.failed ? (
-                      <span className="shrink-0 whitespace-nowrap text-right text-small text-bad-text">
-                        Failed
-                      </span>
+                      // A budget stop is a setting doing its job, not a fault.
+                      line.failed === BUDGET_REACHED ? (
+                        <span className="shrink-0 whitespace-nowrap text-right text-small text-warn-text">
+                          Budget reached
+                        </span>
+                      ) : (
+                        <span className="shrink-0 whitespace-nowrap text-right text-small text-bad-text">
+                          Failed
+                        </span>
+                      )
                     ) : (
                       /*
                        * No fixed width, and no wrapping.
@@ -194,6 +208,11 @@ export function Report({
                         }`}
                       >
                         {line.value}
+                        {!line.quiet && line.tone !== "neutral" && (
+                          <span className={`ml-1.5 text-small font-normal ${TONE_TEXT[line.tone]}`}>
+                            {TONE_WORD[line.tone]}
+                          </span>
+                        )}
                       </span>
                     )}
                     <span
@@ -214,16 +233,36 @@ export function Report({
             })}
           </ul>
           {firstFailure && (
-            <p className="mt-3 text-small text-bad-text" role="alert">
-              {firstFailure}{" "}
-              <button type="button" className="underline underline-offset-2" onClick={onSettings}>
-                Settings
-              </button>
+            <p
+              className={`mt-3 text-small ${
+                firstFailure === BUDGET_REACHED ? "text-warn-text" : "text-bad-text"
+              }`}
+              role="alert"
+            >
+              {firstFailure}
+              {/* Settings can only help with a budget stop, not a Provider
+                  timeout. */}
+              {firstFailure === BUDGET_REACHED && (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="underline underline-offset-2"
+                    onClick={onSettings}
+                  >
+                    Settings
+                  </button>
+                </>
+              )}
             </p>
           )}
           <ActivityRow
             busy={anyRunning}
             long={overviewLong}
+            price={sumPrices(
+              ids.filter((id) => results[id]?.running === true),
+              prices,
+            )}
             label="Refresh"
             canRefresh={hasKey && !savedLoading && refreshable.length > 0}
             onRefresh={() => {
@@ -259,11 +298,13 @@ export function Report({
           domain={domain}
           market={
             PAGE_IDS.has(id)
-              ? `${pathOf(page)} · ${marketLabel(id, market)}`
+              ? `${pageName(page)} · ${marketLabel(id, market)}`
               : marketLabel(id, market)
           }
           hasKey={hasKey}
           state={results[id]}
+          price={prices[id] ?? null}
+          onSettings={onSettings}
           onRun={() => {
             if (!PAGE_IDS.has(id) || fresh) void run(id, true);
           }}
@@ -368,7 +409,7 @@ const TAB_OF: Record<ReportId, Tab> = {
 
 /** One summary row: name, number, age. If it was never bought, say so rather
     than invent a figure. */
-function headline(id: ReportId, state: ResultState | undefined, hasKey: boolean) {
+function headline(id: ReportId, state: ResultState | undefined, hasKey: boolean, domain: string) {
   const entry = state?.entry;
   const payload = entry?.payload;
   const age = entry ? ageOf(entry.fetchedAt) : "—";
@@ -384,7 +425,7 @@ function headline(id: ReportId, state: ResultState | undefined, hasKey: boolean)
     // is missing rather than white-screening the whole panel.
     const visits = payload.panel?.engagement?.visits ?? null;
     return {
-      label: TITLE[id],
+      label: rowLabel(id, domain),
       value: visits === null ? "—" : compact(visits),
       age,
       stale,
@@ -405,7 +446,7 @@ function headline(id: ReportId, state: ResultState | undefined, hasKey: boolean)
     if (id === "ranked-keywords" || id === "page-keywords") {
       const best = bestPosition(payload.fields, payload.keywords);
       return {
-        label: "Best keyword position",
+        label: rowLabel(id, domain),
         value: best === null ? "—" : `#${best}`,
         age,
         stale,
@@ -424,7 +465,7 @@ function headline(id: ReportId, state: ResultState | undefined, hasKey: boolean)
     const metric = field ? FIELD_METRIC[field.label] : undefined;
     const score = metric === undefined ? Number.NaN : fieldValue(metric, field?.value ?? "");
     return {
-      label: TITLE[id],
+      label: rowLabel(id, domain),
       value: field?.value ?? "—",
       age,
       stale,
@@ -439,7 +480,7 @@ function headline(id: ReportId, state: ResultState | undefined, hasKey: boolean)
   // stands for is the absence of anything.
   if (payload?.kind === "none")
     return {
-      label: TITLE[id],
+      label: rowLabel(id, domain),
       value: "No record",
       age,
       stale,
@@ -458,7 +499,7 @@ function headline(id: ReportId, state: ResultState | undefined, hasKey: boolean)
    * this row stops pretending to be busy.
    */
   return {
-    label: TITLE[id],
+    label: rowLabel(id, domain),
     value: hasKey ? "—" : "Needs a Key",
     age,
     stale,
@@ -577,9 +618,11 @@ function ActivityRow({
   label,
   canRefresh,
   onRefresh,
+  price = null,
 }: {
   readonly busy: boolean;
   readonly long?: boolean;
+  readonly price?: ReportPrice | null;
   readonly meta?: React.ReactNode;
   readonly label: string;
   readonly canRefresh: boolean;
@@ -592,7 +635,7 @@ function ActivityRow({
           {busy ? (
             <span className="inline-flex items-center gap-2">
               <Spinner />
-              Fetching…
+              Fetching…{price !== null && ` · ${priceText(price)}`}
             </span>
           ) : (
             meta
@@ -709,6 +752,8 @@ function Panel({
   market,
   hasKey,
   state,
+  price,
+  onSettings,
   onRun,
 }: {
   readonly id: ReportId;
@@ -717,6 +762,9 @@ function Panel({
   readonly market: string | null;
   readonly hasKey: boolean;
   readonly state: ResultState | undefined;
+  /** What this report costs; null when unknown. */
+  readonly price: ReportPrice | null;
+  readonly onSettings: () => void;
   readonly onRun: () => void;
 }) {
   const longWait = useLongWait(state?.running === true || state?.loading === true);
@@ -729,6 +777,11 @@ function Panel({
       <div className="flex items-baseline gap-2">
         <h2 className="text-section font-semibold tracking-tight">{TITLE[id]}</h2>
         {market && <span className="text-small text-muted-foreground">{market}</span>}
+        {id === "domain-rating" && !ratesThisSite(domain) && (
+          <span className="text-small text-muted-foreground">
+            {registrableDomain(domain)} as a whole
+          </span>
+        )}
       </div>
 
       {/*
@@ -795,6 +848,7 @@ function Panel({
                       <div className="mt-1 text-small text-muted-foreground">
                         {field.label}
                         {share && ` · ${share}`}
+                        <ToneWord tone={tone} />
                       </div>
                     )}
                     {/* The meter goes **after** the caption. Between the figure and
@@ -820,7 +874,9 @@ function Panel({
       ) : payload?.kind === "none" ? (
         <p className="mt-3 text-muted-foreground">{payload.reason}</p>
       ) : !hasKey ? (
-        <p className="mt-3 text-muted-foreground">Add a Key in Settings to fetch this.</p>
+        // The Key card above holds the one action; each card says what it will
+        // show instead of repeating the instruction.
+        <p className="mt-3 text-muted-foreground">{BLURB[id]}</p>
       ) : null}
 
       {/*
@@ -835,6 +891,7 @@ function Panel({
         <ActivityRow
           busy={state.running || state.loading}
           long={longWait}
+          price={price}
           label="Refresh"
           canRefresh={hasKey && !state.loading && entry !== null}
           onRefresh={onRun}
@@ -889,7 +946,26 @@ function Panel({
         />
       )}
 
-      {state.error && (
+      {state.error === BUDGET_REACHED ? (
+        // Trying again cannot pass a budget; changing it can.
+        <div className="mt-3">
+          <p className="text-warn-text">{state.error}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" className="button button-secondary" onClick={onSettings}>
+              Open budgets
+            </button>
+            {/* For a budget raised in another tab, or a day that rolled over. */}
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={state.loading || state.running}
+              onClick={onRun}
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      ) : state.error ? (
         <div className="mt-3">
           <p className="text-bad-text">{state.error}</p>
           {hasKey && (
@@ -903,7 +979,7 @@ function Panel({
             </button>
           )}
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -935,6 +1011,8 @@ function FactList({ fields }: { readonly fields: readonly LookupField[] }) {
   );
 }
 
+const LIST_PREVIEW = 3;
+
 /**
  * A comma-separated value whose parts may be links. Only three kinds become
  * anchors — https URLs, email addresses and phone numbers — because the text
@@ -944,7 +1022,12 @@ function FactList({ fields }: { readonly fields: readonly LookupField[] }) {
  * Displayed without the scheme, so the card reads as it did before.
  */
 function Linked({ value }: { readonly value: string }) {
-  const parts = value.split(", ");
+  const all = value.split(", ");
+  // wikipedia.org has about 150 addresses; listed in full they pushed the rest
+  // of the card more than 1000px down. Three, then one control for the rest.
+  const [open, setOpen] = useState(false);
+  const long = all.length > LIST_PREVIEW + 2;
+  const parts = long && !open ? all.slice(0, LIST_PREVIEW) : all;
   return (
     <>
       {parts.map((part, index) => {
@@ -974,6 +1057,18 @@ function Linked({ value }: { readonly value: string }) {
           </Fragment>
         );
       })}
+      {long && (
+        <>
+          {" "}
+          <button
+            type="button"
+            className="whitespace-nowrap text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            onClick={() => setOpen((was) => !was)}
+          >
+            {open ? "Show fewer" : `Show all ${all.length}`}
+          </button>
+        </>
+      )}
     </>
   );
 }
@@ -1015,4 +1110,109 @@ function SeriesBlock({ points }: { readonly points: readonly SeriesPoint[] }) {
 function attributionFor(id: ReportId) {
   if (id === "traffic") return { label: "Similarweb data", href: "https://www.similarweb.com/" };
   return LOOKUPS.find((lookup) => lookup.id === (id as LookupId))?.attribution ?? null;
+}
+
+/** The Overview row label, the same in every state. */
+function rowLabel(id: ReportId, domain: string): string {
+  if (id === "ranked-keywords" || id === "page-keywords") return "Best keyword position";
+  // Under a private suffix the rating belongs to the platform; say whose it is.
+  if (id === "domain-rating" && domain && !ratesThisSite(domain))
+    return `${TITLE[id]} · ${registrableDomain(domain)}`;
+  return TITLE[id];
+}
+
+/** What each card will show, for the state before a Key is added. */
+const BLURB: Record<ReportId, string> = {
+  ...(Object.fromEntries(LOOKUPS.map((lookup) => [lookup.id, lookup.blurb])) as Record<
+    LookupId,
+    string
+  >),
+  traffic: "Monthly visits, engagement and where visits come from, as Similarweb estimates them.",
+};
+
+/**
+ * "free", "about $0.06" or "up to $0.43", from inspect.
+ *
+ * The typical price is what a lookup usually costs and what the README quotes;
+ * the worst-case ceiling alone ($0.43 for the Overview) contradicted the README's
+ * "about $0.06". The ceiling shows only when a rule has no typical price, and is
+ * rounded **up** to the cent so it is never understated.
+ */
+function priceText(price: ReportPrice): string {
+  const max = BigInt(price.max);
+  if (max === 0n) return "free";
+  if (price.typical !== null) {
+    const typical = BigInt(price.typical);
+    const shown = ((typical + 5_000n) / 10_000n) * 10_000n;
+    return shown === 0n ? "under $0.01" : `about ${formatUsd(shown)}`;
+  }
+  return `up to ${formatUsd(((max + 9_999n) / 10_000n) * 10_000n)}`;
+}
+
+/** Several lookups as one price, or null when any price is unknown. */
+function sumPrices(
+  ids: readonly ReportId[],
+  prices: Readonly<Record<string, ReportPrice>>,
+): ReportPrice | null {
+  if (ids.length === 0 || ids.some((id) => prices[id] === undefined)) return null;
+  const all = ids.map((id) => prices[id] as ReportPrice);
+  return {
+    typical: all.some((price) => price.typical === null)
+      ? null
+      : all.reduce((total, price) => total + BigInt(price.typical ?? "0"), 0n).toString(),
+    max: all.reduce((total, price) => total + BigInt(price.max), 0n).toString(),
+  };
+}
+
+/**
+ * Asks the worker for each report's price. Free.
+ *
+ * Asked again whenever the ledger changes. For a report with a request in
+ * flight, the worker answers with the price stored on that request at
+ * admission, so the loading state shows what this Run was admitted with.
+ */
+function usePrices(
+  ids: readonly ReportId[],
+  hasKey: boolean,
+  subject: { readonly domain: string; readonly page: string; readonly market: string },
+) {
+  const [prices, setPrices] = useState<Readonly<Record<string, ReportPrice>>>({});
+  const key = ids.join(",");
+  const { domain, page, market } = subject;
+  useEffect(() => {
+    if (!hasKey) return;
+    let live = true;
+    // Requests overlap on ledger changes. A reply to an older request may hold
+    // an estimate from before a Run was admitted, so it must not land after a
+    // newer one.
+    let asked = 0;
+    let applied = 0;
+    const ask = () => {
+      const turn = ++asked;
+      return chrome.runtime
+        .sendMessage({ type: "openseo:prices", ids: key.split(","), domain, page, market })
+        .then((reply: Record<string, ReportPrice> | undefined) => {
+          if (!live || !reply || turn < applied) return;
+          applied = turn;
+          // A report missing from the reply has no price now; keeping its old
+          // one would show an estimate the worker no longer stands behind.
+          setPrices((old) => {
+            const next = { ...old };
+            for (const id of key.split(",")) delete next[id];
+            return { ...next, ...reply };
+          });
+        })
+        .catch(() => undefined);
+    };
+    void ask();
+    const changed = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === "local" && "openseo:ledger" in changes) void ask();
+    };
+    chrome.storage.onChanged.addListener(changed);
+    return () => {
+      live = false;
+      chrome.storage.onChanged.removeListener(changed);
+    };
+  }, [key, hasKey, domain, page, market]);
+  return prices;
 }

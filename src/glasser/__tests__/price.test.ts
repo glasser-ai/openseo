@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { maxChargeMicros, priceLine, ruleMaxMicros, unsupportedRule } from "../price.js";
+import {
+  maxChargeMicros,
+  type Price,
+  priceLine,
+  ruleMaxMicros,
+  typicalMicros,
+  unsupportedRule,
+} from "../price.js";
 
 describe("maxChargeMicros", () => {
   it("uses the rule when it is the largest", () => {
@@ -104,5 +111,23 @@ describe("priceLine", () => {
         charges: {},
       }),
     ).toBe("$0.01/page (up to $0.50)");
+  });
+});
+
+describe("typicalMicros", () => {
+  const charges = {} as Price["charges"];
+  it("reads the default-size price where the rule has one", () => {
+    expect(typicalMicros({ rule: { type: "flat", amount_usd: "0.012" }, charges })).toBe(12_000n);
+    expect(
+      typicalMicros({ rule: { type: "metered", base_usd: "0.024", cap_usd: "0.264" }, charges }),
+    ).toBe(24_000n);
+  });
+  it("has no typical price for per-result rules", () => {
+    expect(
+      typicalMicros({
+        rule: { type: "per_result", per_result_usd: "0.001", cap_usd: "0.1" },
+        charges,
+      }),
+    ).toBeNull();
   });
 });

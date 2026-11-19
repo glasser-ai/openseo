@@ -12,6 +12,19 @@ import type { PageScan } from "./usePage.js";
 export function AiCrawlers({ scan }: { readonly scan: PageScan }) {
   if (scan.kind !== "ok") return <ScanState scan={scan} title="AI crawler access" />;
   const robots = robotsFor(scan.facts.robots);
+  if (scan.facts.robots.kind === "redirected" || scan.facts.robots.kind === "unchecked") {
+    // Not a fault of the site: OpenSEO could not read the file from the page.
+    return (
+      <section className="report-card">
+        <CardTitle title="AI crawler access" note="robots.txt · free" />
+        <p className="mt-3 text-muted-foreground">
+          {scan.facts.robots.kind === "redirected"
+            ? "robots.txt redirects, and OpenSEO could not follow the redirect from here, so there is no answer."
+            : `The browser could not fetch robots.txt (${scan.facts.robots.reason}), so there is no answer.`}
+        </p>
+      </section>
+    );
+  }
   if (robots === null) {
     return (
       <section className="report-card">

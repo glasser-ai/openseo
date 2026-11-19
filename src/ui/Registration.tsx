@@ -39,13 +39,27 @@ export function Registration({ domain }: { readonly domain: string }) {
   // Still asking the registry. Without this the card was absent and then
   // suddenly present, shoving "At a glance" down the panel as it landed.
   if (state === null) return <Placeholder domain={domain} />;
-  // On a miss the whole block is omitted: a card saying "not found" is not
-  // worth the space it takes. The placeholder above then disappears, which
-  // moves the panel once — but a registry miss is the rare case (a TLD IANA
-  // lists no RDAP service for), and the common one now does not move at all.
-  if (state.kind !== "ok") return null;
+  // A miss keeps the card and says why. It used to vanish, on the belief that
+  // a TLD without RDAP was rare — but .io, .co, .de, .jp, .es, .it and others
+  // publish none, so the Overview changed shape on many sites with no reason.
+  if (state.kind !== "ok" || (state.value.registered === null && state.value.expires === null)) {
+    return (
+      <section className="report-card">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h2 className="text-section font-semibold tracking-tight">Domain</h2>
+          <span className="min-w-0 break-all text-small text-muted-foreground">
+            {registrableDomain(domain)} · free
+          </span>
+        </div>
+        <p className="mt-3 text-muted-foreground">
+          {state.kind === "failed"
+            ? `Registration dates are not available: ${state.reason}.`
+            : `The .${registrableDomain(domain).split(".").pop()} registry publishes no registration dates that OpenSEO can read.`}
+        </p>
+      </section>
+    );
+  }
   const { registered, expires, registrar } = state.value;
-  if (registered === null && expires === null) return null;
 
   return (
     <section className="report-card">

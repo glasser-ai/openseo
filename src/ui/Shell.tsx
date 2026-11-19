@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_MARKET, type Market, marketOf } from "../domain/markets.js";
 import { lookupTarget } from "../domain/page.js";
+import { siteDomain } from "../domain/site.js";
 import type { Tab } from "./navigation.js";
+import { Logo } from "./primitives.jsx";
 import { Report } from "./Report.jsx";
 import { SettingsView } from "./SettingsView.jsx";
 import { Sidebar } from "./Sidebar.jsx";
@@ -100,7 +102,9 @@ export function Shell() {
     scroll.current?.scrollTo({ top: 0 });
   };
 
-  const domain = state.kind === "ready" && !unavailable ? state.host : "";
+  const ready = state.kind === "ready" && !unavailable;
+  // Every domain report reads the site, not the exact host; see siteDomain.
+  const domain = ready ? siteDomain(state.host) : "";
 
   return (
     <div className="flex h-dvh min-w-0 flex-col bg-background">
@@ -112,10 +116,19 @@ export function Shell() {
         What is left is the one thing this screen has to identify: the domain.
       */}
       <header className="flex shrink-0 items-center gap-2.5 border-b border-border bg-card px-4 py-2.5">
-        <img src="/icon/32.png" alt="OpenSEO" className="size-5 shrink-0" />
+        <Logo className="size-5 shrink-0" />
         <div className="flex min-w-0 flex-1 items-baseline gap-2">
-          <h1 className="min-w-0 truncate text-body font-semibold tracking-tight">
-            {state.kind === "ready" && !unavailable ? state.host : "Domain inspector"}
+          {/* The site the figures describe. When the open page is on another
+              host (www., a subdomain), the title says which. */}
+          <h1
+            className="min-w-0 truncate text-body font-semibold tracking-tight"
+            title={
+              ready && domain !== state.host
+                ? `Figures for ${domain} and its subdomains. Open page: ${state.host}`
+                : undefined
+            }
+          >
+            {ready ? domain : "OpenSEO"}
           </h1>
           <span className="shrink-0 text-small text-muted-foreground" title="OpenSEO version">
             v{chrome.runtime.getManifest().version}
@@ -210,7 +223,11 @@ function ReportWorkspace({
   const report = useReport(domain, connection?.hasKey === true, market.id, page);
   return (
     <div className="report-workspace flex min-h-0 flex-1">
-      <Sidebar tab={tab} onTab={select} settingsOpen={settingsOpen} onSettings={onSettings} />
+      {/* No report can run on an unsupported page, so its sections are not
+          offered there. */}
+      {!(unavailable || state.kind === "failed") && (
+        <Sidebar tab={tab} onTab={select} settingsOpen={settingsOpen} onSettings={onSettings} />
+      )}
       <div
         ref={scroll}
         id="report-panel"
@@ -251,7 +268,7 @@ function ReportWorkspace({
             fresh={fresh}
             target={target}
             onSettings={onSettings}
-            domain={state.host}
+            domain={domain}
             hasKey={connection.hasKey}
             market={market}
             onMarket={onMarket}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PanelEntry } from "../domain/cache.js";
 import { LOOKUPS, type LookupId } from "../domain/lookups.js";
 import type { ReportState, RunResult, TrafficResult } from "../domain/service.js";
+import { BUDGET_REACHED, capsRaised } from "../ledger/store.js";
 
 export type ReportId = LookupId | "traffic";
 export type ResultState = {
@@ -71,6 +72,31 @@ export function useReport(domain: string, hasKey: boolean, market: string, page 
       ),
     }));
   }
+
+  /*
+   * A raised budget can admit what the old one stopped. Without this, a report
+   * that never had a saved result stays at "Budget reached": the automatic pass
+   * skips failures, and Refresh needs a saved result. It lives here, not in the
+   * Report, because the Report unmounts while Settings is open, which is where
+   * budgets change.
+   */
+  const [budgetEpoch, setBudgetEpoch] = useState(0);
+  useEffect(() => {
+    const changed = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      const settings = changes["openseo:settings"];
+      if (area !== "local" || !settings) return;
+      if (!capsRaised(settings.oldValue, settings.newValue)) return;
+      setResults((previous) => {
+        const next = { ...previous };
+        for (const id of IDS)
+          if (next[id].error === BUDGET_REACHED) next[id] = { ...next[id], error: null };
+        return next;
+      });
+      setBudgetEpoch((epoch) => epoch + 1);
+    };
+    chrome.storage.onChanged.addListener(changed);
+    return () => chrome.storage.onChanged.removeListener(changed);
+  }, []);
 
   // Only an unmount stops updates. A new subject must not: a request it
   // starts in the same commit would lose its running state.
@@ -246,5 +272,5 @@ export function useReport(domain: string, hasKey: boolean, market: string, page 
       }
     }
   };
-  return { results, run };
+  return { results, run, budgetEpoch };
 }

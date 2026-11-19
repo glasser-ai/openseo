@@ -218,7 +218,7 @@ it("buys every summary row when the overview opens", async () => {
 it("names the missing Key rather than leaving a summary row on an em dash", async () => {
   await render(false, "overview");
   const row = Array.from(container.querySelectorAll("li button")).find((button) =>
-    button.textContent?.startsWith("Ranking keywords"),
+    button.textContent?.startsWith("Best keyword position"),
   )!;
   expect(row.textContent).toContain("Needs a Key");
 });

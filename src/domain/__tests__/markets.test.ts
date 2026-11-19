@@ -201,3 +201,22 @@ it("shows each keyword once, for its best country, without a sum", () => {
     limit: 25,
   });
 });
+
+it("does not list the site as its own competitor under another host", () => {
+  const output = {
+    tasks: [
+      {
+        result: [
+          {
+            target: "wikipedia.org",
+            items: [
+              { domain: "www.wikipedia.org", intersections: 5520, full_domain_metrics: {} },
+              { domain: "youtube.com", intersections: 5170, full_domain_metrics: {} },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  expect(extractCompetitors(output).map((row) => row.name)).toEqual(["youtube.com"]);
+});

@@ -30,6 +30,16 @@ export const SECTIONS: readonly [SettingsSection, string][] = [
 /** One money formatter for the whole product. */
 const money = (value: string | bigint) => formatUsd(BigInt(value));
 /**
+ * Totals to the cent. A single charge keeps every digit (formatUsd never
+ * truncates what was charged), but a running total such as $0.412345 or a
+ * balance of $42.123456 is harder to read than it is useful.
+ */
+const cents = (value: string | bigint) => {
+  const micros = BigInt(value);
+  const rounded = ((micros + (micros < 0n ? -5_000n : 5_000n)) / 10_000n) * 10_000n;
+  return formatUsd(rounded);
+};
+/**
  * "Sep 17, 1:48 PM". No year — this column shares a 528px row with the domain
  * and the Provider, and the year is almost always the current one; where it
  * genuinely matters, hovering the row shows the full endpoint path.
@@ -71,6 +81,10 @@ export type Actions = {
  * people to another tab, and that page read the same storage and rendered the
  * same sections. Written twice, one copy falls behind sooner or later.
  */
+/** An error already shown beside its field; the page banner stays quiet so the
+    same failure is not said twice. */
+class FieldError extends Error {}
+
 export function useSettingsData() {
   const [data, setData] = useState<Snapshot | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -97,7 +111,7 @@ export function useSettingsData() {
         if (mounted.current && knownKey.current === key)
           setBalance(
             result.kind === "answered"
-              ? `Balance $${result.value.available_usd}`
+              ? `Balance ${cents(usdToMicros(result.value.available_usd))}`
               : "Connection unavailable. Check your Key or try again later.",
           );
       }
@@ -131,10 +145,12 @@ export function useSettingsData() {
       await refresh();
       setFeedback({ text: success, bad: false });
     } catch (error) {
-      setFeedback({
-        text: error instanceof Error ? error.message : "The change could not be saved. Try again.",
-        bad: true,
-      });
+      if (!(error instanceof FieldError))
+        setFeedback({
+          text:
+            error instanceof Error ? error.message : "The change could not be saved. Try again.",
+          bad: true,
+        });
     } finally {
       setBusy(false);
     }
@@ -152,14 +168,86 @@ export function AccountSettings({
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <Heading>Connection</Heading>
+        {/* "Connection" is already the settings page's title. */}
+        <Heading>glasser account</Heading>
         <Connection hasKey={data.hasKey} balance={balance} busy={busy} perform={perform} />
         <div className="mt-4 border-t border-border pt-3">
           <SpentSummary data={data} />
         </div>
       </Card>
       <SpendingSettings settings={data.settings} busy={busy} perform={perform} />
+      <BadgeSettings settings={data.settings} hasKey={data.hasKey} busy={busy} perform={perform} />
     </div>
+  );
+}
+
+/** Both switches apply at once; the worker updates every tab's badge when
+    either changes. */
+function BadgeSettings({
+  settings,
+  hasKey,
+  busy,
+  perform,
+}: { settings: Settings; hasKey: boolean } & Actions) {
+  return (
+    <Card>
+      <Heading>Toolbar badge</Heading>
+      <label className="mt-3 flex items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={settings.ratingBadge}
+          disabled={busy}
+          onChange={(event) => {
+            const ratingBadge = event.target.checked;
+            void perform(
+              () => saveSettings({ ratingBadge }),
+              ratingBadge ? "The toolbar icon shows Domain Rating." : "The badge is off.",
+            );
+          }}
+        />
+        <span>
+          <span className="block text-small font-medium">
+            Show Domain Rating on the toolbar icon
+          </span>
+          <span className="mt-1 block text-small text-muted-foreground">
+            Shows the open site's Domain Rating when one is saved from the last 7 days.
+          </span>
+        </span>
+      </label>
+      {/* Off while the badge is off: a lookup with nowhere to show it would be
+          money spent on nothing. */}
+      <label className="mt-3 flex items-start gap-3 border-t border-border pt-3">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={settings.ratingBadge && settings.autoRating}
+          disabled={!settings.ratingBadge || busy}
+          onChange={(event) => {
+            const autoRating = event.target.checked;
+            void perform(
+              () => saveSettings({ autoRating }),
+              autoRating ? "New sites will be looked up." : "Automatic lookups are off.",
+            );
+          }}
+        />
+        <span>
+          <span className="block text-small font-medium">Look up new sites automatically</span>
+          <span className="mt-1 block text-small text-muted-foreground">
+            For each new site you view in the front tab, OpenSEO looks up its Domain Rating and
+            sends the domain to glasser. The lookup is free today; if glasser starts charging, it
+            counts against your budgets. Results are saved for 7 days. Turn this off to show saved
+            ratings only.
+          </span>
+          {/* Without a Key the switch reads "on" while nothing can happen. */}
+          {!hasKey && settings.ratingBadge && settings.autoRating && (
+            <span className="mt-1 block text-small text-warn-text">
+              Needs a glasser Key. Add one under glasser account above.
+            </span>
+          )}
+        </span>
+      </label>
+    </Card>
   );
 }
 
@@ -172,7 +260,7 @@ function SpendingSettings({ settings, busy, perform }: { settings: Settings } & 
   }, [settings.dailyCapMicros, settings.monthlyCapMicros]);
   return (
     <Card>
-      <h2 className="text-small font-medium">Estimated budgets · USD</h2>
+      <Heading>Estimated budgets · USD</Heading>
       <form
         className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2"
         onSubmit={(event) => {
@@ -230,6 +318,12 @@ function Connection({
 }: { hasKey: boolean; balance: string } & Actions) {
   const [input, setInput] = useState("");
   const [show, setShow] = useState(false);
+  // A rejected Key is a fault of this field, so it is said here, not in the
+  // page banner, and the field is marked.
+  const [keyError, setKeyError] = useState<string | null>(null);
+  /** Only a Key glasser rejected is marked invalid; a busy server is not the
+      Key's fault. */
+  const [keyInvalid, setKeyInvalid] = useState(false);
   const [action, setAction] = useState<"replace" | "remove" | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cancelRemovalRef = useRef<HTMLButtonElement>(null);
@@ -323,17 +417,32 @@ function Connection({
           className="space-y-2"
           onSubmit={(event) => {
             event.preventDefault();
+            setKeyError(null);
+            setKeyInvalid(false);
             void perform(async () => {
               const key = input.trim();
-              if (!key.startsWith("gl_") || key.length < 4)
-                throw new Error("Enter a glasser Key that starts with gl_.");
+              if (!key.startsWith("gl_") || key.length < 4) {
+                setKeyError("A glasser Key starts with gl_. Check that you copied all of it.");
+                setKeyInvalid(true);
+                throw new FieldError("The Key was not saved.");
+              }
               const outcome = await getBalance(key);
-              if (outcome.kind !== "answered")
-                throw new Error(
-                  outcome.kind === "refused"
-                    ? outcome.message
-                    : "Could not verify this Key. Check your connection and try again.",
+              if (outcome.kind !== "answered") {
+                setKeyInvalid(
+                  outcome.kind === "refused" && (outcome.status === 401 || outcome.status === 403),
                 );
+                setKeyError(
+                  outcome.kind !== "refused"
+                    ? "Could not reach glasser to check this Key. Check your connection and try again."
+                    : outcome.status === 401 || outcome.status === 403
+                      ? "glasser did not accept this Key. Check that you copied all of it, or create a new one."
+                      : // A rate limit or other refusal says nothing about the Key.
+                        outcome.status === 429
+                        ? "glasser is busy. Wait a minute, then try again."
+                        : `glasser could not check this Key: ${outcome.message}`,
+                );
+                throw new FieldError("The Key was not saved.");
+              }
               await setKey(key);
               cancel();
             }, "Key saved. Return to your website; the open panel is ready.");
@@ -345,16 +454,26 @@ function Connection({
           <input
             ref={inputRef}
             id="api-key"
-            className="field mono"
+            className={`field mono ${keyInvalid ? "border-bad" : ""}`}
             type={show ? "text" : "password"}
             value={input}
-            onChange={(event) => setInput(event.target.value)}
+            onChange={(event) => {
+              setInput(event.target.value);
+              setKeyError(null);
+              setKeyInvalid(false);
+            }}
             spellCheck={false}
             autoComplete="off"
             placeholder="gl_…"
             required
-            aria-describedby="key-help"
+            aria-invalid={keyInvalid}
+            aria-describedby={keyError ? "key-error key-help" : "key-help"}
           />
+          {keyError && (
+            <p id="key-error" role="alert" className="text-small text-bad-text">
+              {keyError}
+            </p>
+          )}
           <label className="flex items-center gap-2 text-small">
             <input
               type="checkbox"
@@ -519,10 +638,14 @@ function BudgetCell({
   return (
     <div>
       <div className={`text-section font-semibold leading-none tabular-nums ${TONE_TEXT[tone]}`}>
-        {money(spent(cap, remaining, reserved))}
+        {cents(spent(cap, remaining, reserved))}
       </div>
       <div className="mt-1 text-small text-muted-foreground">
-        {capped ? `${caption} · of ${money(cap)}` : caption}
+        {capped ? `${caption} · of ${cents(cap)}` : caption}
+        {/* The budget's own words for its tone, so colour is not the only
+            signal that lookups are stopping. */}
+        {capped && tone === "bad" && <span className={TONE_TEXT.bad}> · reached</span>}
+        {capped && tone === "warn" && <span className={TONE_TEXT.warn}> · nearly used</span>}
       </div>
       {held && <div className="text-small text-muted-foreground">{held} held</div>}
       {capped && (

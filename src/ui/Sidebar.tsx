@@ -103,13 +103,13 @@ export function Sidebar({
             fill="none"
             stroke="currentColor"
             strokeWidth="1.4"
+            strokeLinejoin="round"
             aria-hidden
           >
+            {/* A gear with eight teeth. The earlier dot with rays read as a sun,
+                which is the theme control in most products. */}
+            <path d="M6.5 3.2 7 1.5h2l.5 1.7.9.4 1.5-.9 1.4 1.4-.9 1.5.4.9 1.7.5v2l-1.7.5-.4.9.9 1.5-1.4 1.4-1.5-.9-.9.4-.5 1.7H7l-.5-1.7-.9-.4-1.5.9-1.4-1.4.9-1.5-.4-.9L1.5 9V7l1.7-.5.4-.9-.9-1.5 1.4-1.4 1.5.9Z" />
             <circle cx="8" cy="8" r="2" />
-            <path
-              d="M8 1.7v1.6M8 12.7v1.6M14.3 8h-1.6M3.3 8H1.7M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1M12.4 12.4l-1.1-1.1M4.7 4.7L3.6 3.6"
-              strokeLinecap="round"
-            />
           </svg>
           Settings
         </button>
