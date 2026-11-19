@@ -258,7 +258,9 @@ export function Traffic({ panel }: { readonly panel: TrafficPanel }) {
                   {/* A 0 CPC is measured — nobody bids on that term. The dash is
                       for "no such figure", the same distinction the Search
                       table makes. */}
-                  <td>{row.volume === null ? "—" : row.volume.toLocaleString("en-US")}</td>
+                  <td title={row.volume === null ? undefined : row.volume.toLocaleString("en-US")}>
+                    {row.volume === null ? "—" : compact(row.volume)}
+                  </td>
                   <td className="mono">{row.cpc === null ? "—" : `$${row.cpc.toFixed(2)}`}</td>
                 </tr>
               ))}

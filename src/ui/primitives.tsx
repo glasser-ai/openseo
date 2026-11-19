@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Tone } from "../domain/thresholds.js";
-import { TONE_TEXT } from "./palette.js";
+import { TONE_TEXT, TONE_WORD } from "./palette.js";
 
 export const Heading = ({ children }: { readonly children: ReactNode }) => (
   <h2 className="text-section font-semibold tracking-tight">{children}</h2>
@@ -51,9 +51,19 @@ export function Figure({
       >
         {value}
       </div>
-      <div className="mt-1 text-small text-muted-foreground">{caption}</div>
+      <div className="mt-1 text-small text-muted-foreground">
+        {caption}
+        <ToneWord tone={tone} />
+      </div>
     </div>
   );
+}
+
+/** " · good", in the tone's text colour; nothing for neutral. Colour is then a
+    second channel, not the only one. */
+export function ToneWord({ tone }: { readonly tone: Tone }) {
+  if (tone === "neutral") return null;
+  return <span className={TONE_TEXT[tone]}> · {TONE_WORD[tone]}</span>;
 }
 
 /** Metadata wraps: a narrow panel must not hide the Provider or charge. */
@@ -92,5 +102,25 @@ export function Footer({
         )}
       </div>
     </footer>
+  );
+}
+
+/**
+ * The OpenSEO mark. Its head is black, so on a dark surface only the orange
+ * strap would show and read as a fault; the all-orange form is for dark
+ * backgrounds, the same rule the toolbar icon follows.
+ */
+export function Logo({
+  className,
+  alt = "",
+}: {
+  readonly className: string;
+  readonly alt?: string;
+}) {
+  return (
+    <picture className="contents">
+      <source srcSet="/icon-dark/32.png" media="(prefers-color-scheme: dark)" />
+      <img src="/icon/32.png" alt={alt} className={className} />
+    </picture>
   );
 }

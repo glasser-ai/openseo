@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "../../src/ui/style.css";
 import type { SettingsSection } from "../../src/ui/navigation.js";
-import { Status } from "../../src/ui/primitives.jsx";
+import { Logo, Status } from "../../src/ui/primitives.jsx";
 import { AccountSettings, Activity, SECTIONS, useSettingsData } from "../../src/ui/settings.jsx";
 
 const sectionFromHash = (): SettingsSection =>
@@ -35,7 +35,7 @@ function Options() {
     <main className="options-layout">
       <aside>
         <a href="#connection" className="flex items-center gap-2 text-section font-semibold">
-          <img src="/icon/32.png" alt="" className="size-6" />
+          <Logo className="size-6" />
           OpenSEO
         </a>
         <p className="mt-2 text-small text-muted-foreground">Settings and activity</p>

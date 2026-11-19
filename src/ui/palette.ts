@@ -14,6 +14,20 @@ export const TONE_FILL: Record<Tone, string> = {
   neutral: "bg-foreground",
 };
 
+/**
+ * The tone in one word, shown beside a toned figure (DESIGN.md D9).
+ *
+ * Colour alone carried the judgement: a reader who cannot tell green from amber
+ * saw the number but not whether OpenSEO thought it strong. The word is plain
+ * and metric-agnostic because the bands already differ per metric.
+ */
+export const TONE_WORD: Record<Tone, string> = {
+  good: "good",
+  warn: "check",
+  bad: "problem",
+  neutral: "",
+};
+
 /** neutral is an empty string: inherit the surrounding foreground rather than
     writing another colour for the neutral state. */
 export const TONE_TEXT: Record<Tone, string> = {

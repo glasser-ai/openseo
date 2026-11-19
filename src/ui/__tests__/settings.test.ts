@@ -165,3 +165,50 @@ it("draws no budget meter when the cap is zero", async () => {
   );
   expect(container.querySelectorAll("[role=meter]")).toHaveLength(0);
 });
+
+it("says a rejected Key at the field, and marks the field", async () => {
+  await chooseKeyAction("Replace API Key");
+  await enterKey("gl_wrong");
+  vi.mocked(getBalance).mockResolvedValue({
+    kind: "refused",
+    status: 401,
+    code: "unauthorized",
+    message: "Invalid or missing API key",
+    requestId: null,
+  } as never);
+  // The page banner is useSettingsData's; this stub swallows the FieldError the
+  // way it does, so only the field speaks.
+  const quiet = async (action: () => Promise<void>) => action().catch(() => undefined);
+  await act(async () =>
+    root.render(createElement(AccountSettings, { data, balance: "", busy: false, perform: quiet })),
+  );
+  await click("Confirm replacement");
+  const input = container.querySelector("#api-key") as HTMLInputElement;
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  expect(container.querySelector("#key-error")?.textContent).toContain(
+    "glasser did not accept this Key",
+  );
+  expect(setKey).not.toHaveBeenCalled();
+});
+
+it("asks to wait when glasser is busy, without marking the Key", async () => {
+  await chooseKeyAction("Replace API Key");
+  await enterKey("gl_valid");
+  vi.mocked(getBalance).mockResolvedValue({
+    kind: "refused",
+    status: 429,
+    code: "rate_limited",
+    message: "Too many requests",
+    retryAfterMs: 60_000,
+    requestId: null,
+  } as never);
+  const quiet = async (action: () => Promise<void>) => action().catch(() => undefined);
+  await act(async () =>
+    root.render(createElement(AccountSettings, { data, balance: "", busy: false, perform: quiet })),
+  );
+  await click("Confirm replacement");
+  const input = container.querySelector("#api-key") as HTMLInputElement;
+  expect(input.getAttribute("aria-invalid")).toBe("false");
+  expect(container.querySelector("#key-error")?.textContent).toContain("glasser is busy");
+  expect(setKey).not.toHaveBeenCalled();
+});
