@@ -85,11 +85,19 @@ export const BUDGET_REACHED = "Estimated budget reached. Check estimated budgets
 export type Settings = {
   readonly dailyCapMicros: string;
   readonly monthlyCapMicros: string;
+  /** Show the cached Domain Rating of the open site on the toolbar icon. */
+  readonly ratingBadge: boolean;
+  /** Look up Domain Rating by itself for each new site viewed, for the badge.
+      Each lookup counts against the budgets (it is free today) and sends the
+      domain to glasser; Settings turns it off. */
+  readonly autoRating: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   dailyCapMicros: encodeMicros(5_000_000n), // $5.00
   monthlyCapMicros: encodeMicros(20_000_000n), // $20.00
+  ratingBadge: true,
+  autoRating: true,
 };
 
 type Spend = {
@@ -174,6 +182,8 @@ export async function getSettings(): Promise<Settings> {
   return {
     dailyCapMicros: saved?.dailyCapMicros ?? DEFAULT_SETTINGS.dailyCapMicros,
     monthlyCapMicros: saved?.monthlyCapMicros ?? DEFAULT_SETTINGS.monthlyCapMicros,
+    ratingBadge: saved?.ratingBadge ?? DEFAULT_SETTINGS.ratingBadge,
+    autoRating: saved?.autoRating ?? DEFAULT_SETTINGS.autoRating,
   };
 }
 export async function patchSettings(patch: Partial<Settings>): Promise<Settings> {
@@ -183,6 +193,8 @@ export async function patchSettings(patch: Partial<Settings>): Promise<Settings>
     if (key === "dailyCapMicros" || key === "monthlyCapMicros") {
       if (typeof value !== "string" || !/^\d+$/.test(value))
         throw new Error("Budgets must be nonnegative amounts.");
+    } else if (key === "ratingBadge" || key === "autoRating") {
+      if (typeof value !== "boolean") throw new Error("Invalid settings.");
     } else throw new Error("Unknown setting.");
   }
   return serialized(async () => {

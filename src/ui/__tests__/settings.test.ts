@@ -149,7 +149,12 @@ it("draws no budget meter when the cap is zero", async () => {
       createElement(AccountSettings, {
         data: {
           ...data,
-          settings: { dailyCapMicros: "0", monthlyCapMicros: "0" },
+          settings: {
+            dailyCapMicros: "0",
+            monthlyCapMicros: "0",
+            ratingBadge: true,
+            autoRating: true,
+          },
           room: { dayRemaining: 0n, monthRemaining: 0n, reserved: 0n },
         },
         balance: "",

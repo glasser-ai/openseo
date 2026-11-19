@@ -159,7 +159,78 @@ export function AccountSettings({
         </div>
       </Card>
       <SpendingSettings settings={data.settings} busy={busy} perform={perform} />
+      <BadgeSettings settings={data.settings} hasKey={data.hasKey} busy={busy} perform={perform} />
     </div>
+  );
+}
+
+/** Both switches apply at once; the worker updates every tab's badge when
+    either changes. */
+function BadgeSettings({
+  settings,
+  hasKey,
+  busy,
+  perform,
+}: { settings: Settings; hasKey: boolean } & Actions) {
+  return (
+    <Card>
+      <Heading>Toolbar badge</Heading>
+      <label className="mt-3 flex items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={settings.ratingBadge}
+          disabled={busy}
+          onChange={(event) => {
+            const ratingBadge = event.target.checked;
+            void perform(
+              () => saveSettings({ ratingBadge }),
+              ratingBadge ? "The toolbar icon shows Domain Rating." : "The badge is off.",
+            );
+          }}
+        />
+        <span>
+          <span className="block text-small font-medium">
+            Show Domain Rating on the toolbar icon
+          </span>
+          <span className="mt-1 block text-small text-muted-foreground">
+            Shows the open site's Domain Rating when one is saved from the last 7 days.
+          </span>
+        </span>
+      </label>
+      {/* Off while the badge is off: a lookup with nowhere to show it would be
+          money spent on nothing. */}
+      <label className="mt-3 flex items-start gap-3 border-t border-border pt-3">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={settings.ratingBadge && settings.autoRating}
+          disabled={!settings.ratingBadge || busy}
+          onChange={(event) => {
+            const autoRating = event.target.checked;
+            void perform(
+              () => saveSettings({ autoRating }),
+              autoRating ? "New sites will be looked up." : "Automatic lookups are off.",
+            );
+          }}
+        />
+        <span>
+          <span className="block text-small font-medium">Look up new sites automatically</span>
+          <span className="mt-1 block text-small text-muted-foreground">
+            For each new site you view in the front tab, OpenSEO looks up its Domain Rating and
+            sends the domain to glasser. The lookup is free today; if glasser starts charging, it
+            counts against your budgets. Results are saved for 7 days. Turn this off to show saved
+            ratings only.
+          </span>
+          {/* Without a Key the switch reads "on" while nothing can happen. */}
+          {!hasKey && settings.ratingBadge && settings.autoRating && (
+            <span className="mt-1 block text-small text-warn-text">
+              Needs a glasser Key. Add one under glasser account above.
+            </span>
+          )}
+        </span>
+      </label>
+    </Card>
   );
 }
 

@@ -20,7 +20,10 @@ export default defineConfig({
     // from the page.
     // alarms: how pending requests are recovered after the worker is killed, and
     // not optional.
-    permissions: ["storage", "activeTab", "scripting", "contextMenus", "alarms"],
+    // tabs: the Domain Rating badge on the toolbar icon needs each tab's address
+    // as it changes, which activeTab does not give. The badge is on by default,
+    // so the permission cannot be optional. Settings turns the badge off.
+    permissions: ["storage", "activeTab", "scripting", "contextMenus", "alarms", "tabs"],
     // API host permission. Public RDAP requests use CORS.
     host_permissions: ["https://api.glasser.ai/*"],
     // The in-page report loads an extension iframe with a session-specific URL.
