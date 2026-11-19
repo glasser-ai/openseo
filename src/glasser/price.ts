@@ -141,3 +141,17 @@ function formatted(usd: string): string {
   usdToMicros(usd);
   return `$${usd}`;
 }
+
+/**
+ * What a Run usually costs at the request size OpenSEO sends, or `null` when the
+ * rule has no single typical price (per_result, per_token, or a rule this build
+ * does not know). The README's "about $0.06" figures are these; the reservation
+ * still uses maxChargeMicros.
+ */
+export function typicalMicros(price: Price): Micros | null {
+  const r = known(price.rule);
+  if (r === null) return null;
+  if (r.type === "flat") return usdToMicros(r.amount_usd);
+  if (r.type === "base_plus_per_result" || r.type === "metered") return usdToMicros(r.base_usd);
+  return null;
+}

@@ -5,16 +5,32 @@ vi.mock("../../glasser/client.js", () => ({ inspectEndpoint: api.inspect }));
 vi.mock("../../glasser/runner.js", () => ({ dispatch: api.dispatch }));
 vi.mock("../../glasser/idempotency.js", () => ({
   idempotencyKey: async () => "idempotency-test",
+  timeoutRetryKey: async (first: string) => `${first}:retry`,
   mintEpoch: () => "epoch-test",
 }));
 
 import type { Run } from "../../glasser/schema.js";
-import type { PendingRecord } from "../../ledger/store.js";
+import {
+  allRetryIntents,
+  fingerprint,
+  handOffToRetry,
+  type PendingRecord,
+  putPending,
+  serialized,
+} from "../../ledger/store.js";
 import { isOutdated, readPanel, readStoredPanel, writePanel } from "../cache.js";
 import { extractKeywords, LOOKUPS } from "../lookups.js";
 import { DEFAULT_MARKET } from "../markets.js";
 import { persistRecoveredPanel } from "../persist.js";
-import { peekLookup, peekTraffic, runLookup, runTraffic } from "../service.js";
+import {
+  peekLookup,
+  peekTraffic,
+  priceCeilings,
+  readReportState,
+  retryRecoveredTimeout,
+  runLookup,
+  runTraffic,
+} from "../service.js";
 
 let bag: Record<string, unknown>;
 const lookup = LOOKUPS.find((item) => item.id === "domain-rating")!;
@@ -278,4 +294,236 @@ it("rechecks the cache when recovery finishes during endpoint inspection", async
     cached: true,
   });
   expect(api.dispatch).not.toHaveBeenCalled();
+});
+
+describe("Provider timeouts", () => {
+  const timedOut: Run = {
+    ...run,
+    status: "FAILED",
+    output: null,
+    charge_usd: "0.00",
+    failure: { kind: "TIMED_OUT", message: "The provider did not respond within 20000ms" },
+  } as Run;
+
+  it("asks once more after a timeout, which costs nothing, and keeps the answer", async () => {
+    vi.useFakeTimers();
+    api.dispatch
+      .mockImplementationOnce(async () => ({ kind: "settled", run: timedOut }))
+      .mockImplementationOnce(async (_request, persist) => {
+        await persist(run);
+        return { kind: "settled", run };
+      });
+    const result = runLookup("domain-rating", "timeout.example");
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(await result).toMatchObject({ ok: true });
+    expect(api.dispatch).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("asks only once more, then reports the timeout", async () => {
+    vi.useFakeTimers();
+    api.dispatch.mockImplementation(async () => ({ kind: "settled", run: timedOut }));
+    const result = runLookup("domain-rating", "slow.example");
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(await result).toMatchObject({
+      ok: false,
+      reason: "The provider did not respond within 20000ms",
+    });
+    expect(api.dispatch).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("marks the retry, and tells the badge's check that it is the retry", async () => {
+    vi.useFakeTimers();
+    const admit = vi.fn(async () => null);
+    api.dispatch.mockImplementation(async (request) => {
+      await request.admit?.();
+      return { kind: "settled", run: timedOut };
+    });
+    const result = runLookup("domain-rating", "auto.example", false, undefined, {
+      tabId: 7,
+      admit,
+    });
+    await vi.advanceTimersByTimeAsync(2_000);
+    await result;
+    expect(admit.mock.calls).toEqual([[{ retry: false }], [{ retry: true }]]);
+    expect(api.dispatch.mock.calls[0]?.[0]).not.toHaveProperty("timeoutRetry");
+    expect(api.dispatch.mock.calls[1]?.[0]).toMatchObject({
+      timeoutRetry: true,
+      automatic: { tabId: 7 },
+    });
+    vi.useRealTimers();
+  });
+
+  it("names the live retry after the first request, as recovery does", async () => {
+    vi.useFakeTimers();
+    api.dispatch.mockImplementation(async () => ({ kind: "settled", run: timedOut }));
+    const result = runLookup("domain-rating", "named.example");
+    await vi.advanceTimersByTimeAsync(2_000);
+    await result;
+    expect(api.dispatch.mock.calls[1]?.[0]).toMatchObject({
+      idemKey: "idempotency-test:retry",
+    });
+    vi.useRealTimers();
+  });
+
+  it("retries a recovered timeout through a fresh price check and the caller's check", async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    let vetoed: unknown = "not asked";
+    api.dispatch.mockImplementationOnce(async (request) => {
+      vetoed = await request.admit?.();
+      return new Promise((resolve) => (finish = resolve));
+    });
+    const admit = vi.fn(async () => null);
+    const record = {
+      idemKey: "first",
+      purpose: { kind: "panel" as const },
+      provider: lookup.provider,
+      endpoint: lookup.endpoint,
+      input: lookup.buildInput("recovered.example", DEFAULT_MARKET),
+      domains: ["recovered.example"],
+      keyFingerprint: await fingerprint("gl_test"),
+      reservedMicros: "0",
+      dispatchedAt: Date.now(),
+      attempts: 1,
+      state: "in-flight" as const,
+      automatic: { tabId: 3 },
+    };
+    // What the runner does on settlement: the intent replaces the request.
+    await putPending(record);
+    await serialized(() => handOffToRetry("first"));
+    retryRecoveredTimeout(record, admit);
+    // Between the timeout and the retry's own record, the report stays running.
+    expect((await readReportState("domain-rating", "recovered.example")).state).toBe("running");
+    await vi.waitFor(() => expect(api.dispatch).toHaveBeenCalledTimes(1));
+    expect(api.inspect).toHaveBeenCalled();
+    expect(api.dispatch.mock.calls[0]?.[0]).toMatchObject({
+      idemKey: "first:retry",
+      timeoutRetry: true,
+      automatic: { tabId: 3 },
+      maxChargeMicros: 12360n,
+    });
+    expect(admit).toHaveBeenCalled();
+    expect(vetoed).toBeNull();
+    finish({ kind: "settled", run });
+    // The intent goes when the retry ends.
+    await vi.waitFor(async () => expect(await allRetryIntents()).toHaveLength(0));
+  });
+
+  it("does not buy the retry when a newer result is already saved", async () => {
+    let vetoed: unknown = "not asked";
+    api.dispatch.mockImplementationOnce(async (request) => {
+      vetoed = await request.admit?.();
+      return { kind: "blocked", reason: String(vetoed) };
+    });
+    const input = lookup.buildInput("saved.example", DEFAULT_MARKET);
+    const sent = Date.now() - 1_000;
+    await writePanel(lookup.endpoint, input, {
+      payload: { kind: "fields", fields: [{ label: "Domain Rating", value: "50" }] },
+      runUrl: "",
+      chargeUsd: "0",
+    });
+    retryRecoveredTimeout({
+      idemKey: "first-saved",
+      purpose: { kind: "panel" },
+      provider: lookup.provider,
+      endpoint: lookup.endpoint,
+      input,
+      domains: ["saved.example"],
+      keyFingerprint: await fingerprint("gl_test"),
+      reservedMicros: "0",
+      dispatchedAt: sent,
+      attempts: 1,
+      state: "in-flight",
+    });
+    await vi.waitFor(() => expect(vetoed).toBe("A newer result is already saved."));
+  });
+
+  it("does not retry a recovered timeout under another Key", async () => {
+    retryRecoveredTimeout({
+      idemKey: "first",
+      purpose: { kind: "panel" },
+      provider: lookup.provider,
+      endpoint: lookup.endpoint,
+      input: lookup.buildInput("other.example", DEFAULT_MARKET),
+      domains: ["other.example"],
+      keyFingerprint: await fingerprint("gl_someone_else"),
+      reservedMicros: "0",
+      dispatchedAt: Date.now(),
+      attempts: 1,
+      state: "in-flight",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(api.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("does not retry a timeout that was charged", async () => {
+    api.dispatch.mockImplementation(async () => ({
+      kind: "settled",
+      run: { ...timedOut, charge_usd: "0.01" },
+    }));
+    expect(await runLookup("domain-rating", "charged.example")).toMatchObject({ ok: false });
+    expect(api.dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry with a Key that replaced the first one", async () => {
+    vi.useFakeTimers();
+    api.dispatch.mockImplementationOnce(async () => {
+      bag["openseo:key"] = "gl_other";
+      return { kind: "settled", run: timedOut };
+    });
+    const result = runLookup("domain-rating", "swap.example");
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(await result).toMatchObject({ ok: false, reason: "Key changed. Try again." });
+    expect(api.dispatch).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("sends the inspected Key with the request", async () => {
+    await runLookup("domain-rating", "keyed.example");
+    expect(api.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "gl_test" }),
+      expect.any(Function),
+    );
+  });
+});
+
+describe("loading price", () => {
+  it("drops an old estimate when the current rule cannot be priced", async () => {
+    vi.useFakeTimers();
+    try {
+      expect((await priceCeilings(["domain-rating"]))["domain-rating"]).toBeDefined();
+      vi.advanceTimersByTime(11 * 60_000);
+      api.inspect.mockResolvedValue({
+        kind: "answered",
+        value: { price: { rule: { type: "auction" }, charges: {} }, endpoint_version: 2 },
+      });
+      expect(await priceCeilings(["domain-rating"])).toEqual({});
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a running request's own admitted price, not the latest inspection", async () => {
+    const input = lookup.buildInput("priced.example", DEFAULT_MARKET);
+    await putPending({
+      idemKey: "running",
+      purpose: { kind: "panel" },
+      provider: lookup.provider,
+      endpoint: lookup.endpoint,
+      input,
+      domains: ["priced.example"],
+      keyFingerprint: "fp",
+      reservedMicros: "0",
+      estimate: { typical: "10000", max: "20000" },
+      dispatchedAt: Date.now(),
+      attempts: 1,
+      state: "in-flight",
+    });
+    const prices = await priceCeilings(["domain-rating"], {
+      domain: "priced.example",
+      page: "",
+    });
+    expect(prices["domain-rating"]).toEqual({ typical: "10000", max: "20000" });
+  });
 });

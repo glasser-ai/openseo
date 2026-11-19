@@ -1,10 +1,11 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({ create: vi.fn(), get: vi.fn() }));
 vi.mock("../client.js", () => ({ createRun: api.create, getRun: api.get }));
 
 import {
   allPending,
+  allRetryIntents,
   getHistory,
   headroom,
   patchSettings,
@@ -237,4 +238,90 @@ it("does not resume an old timeout with a different Key", async () => {
   expect(api.create).toHaveBeenCalledTimes(1);
   expect(api.get).not.toHaveBeenCalled();
   expect((await allPending())[0]).toMatchObject({ state: "suspended", reason: "the Key changed" });
+});
+
+it("sends nothing when the Key differs from the one the request was priced with", async () => {
+  expect(await dispatch({ ...request, key: "gl_replaced_fake" })).toMatchObject({
+    kind: "blocked",
+    reason: "Key changed. Try again.",
+  });
+  expect(api.create).not.toHaveBeenCalled();
+  expect(await allPending()).toHaveLength(0);
+});
+
+it("sends nothing when the caller's last check vetoes the request", async () => {
+  expect(
+    await dispatch({ ...request, admit: async () => "Automatic Domain Rating lookups are off." }),
+  ).toMatchObject({ kind: "blocked", reason: "Automatic Domain Rating lookups are off." });
+  expect(api.create).not.toHaveBeenCalled();
+  expect(await allPending()).toHaveLength(0);
+});
+
+it("keeps the admitted price on the pending request", async () => {
+  api.create.mockImplementationOnce(() => new Promise(() => undefined));
+  void dispatch({ ...request, typicalMicros: 70000n });
+  await vi.waitFor(async () => expect(await allPending()).toHaveLength(1));
+  expect((await allPending())[0]?.estimate).toEqual({ typical: "70000", max: "100000" });
+});
+
+describe("a timeout that recovery finds", () => {
+  const timedOut = {
+    ...run,
+    status: "FAILED",
+    output: null,
+    charge_usd: "0.00",
+    failure: { kind: "TIMED_OUT", message: "The provider did not respond within 20000ms" },
+  };
+  const lost = async (extra: Partial<typeof request> & { timeoutRetry?: boolean } = {}) => {
+    // The first response is lost, so only recovery sees the Run.
+    api.create.mockResolvedValueOnce({ kind: "uncertain", reason: "network" });
+    await dispatch({ ...request, ...extra });
+  };
+
+  it("hands it to the retry, once", async () => {
+    await lost();
+    api.create.mockResolvedValueOnce({ kind: "answered", value: timedOut });
+    const onTimedOut = vi.fn();
+    await recover(undefined, onTimedOut);
+    expect(onTimedOut).toHaveBeenCalledWith(expect.objectContaining({ idemKey: "test" }));
+    expect(await allPending()).toHaveLength(0);
+    // The intent holds the lock but no money.
+    expect(await allRetryIntents()).toHaveLength(1);
+    expect((await headroom()).reserved).toBe(0n);
+    // A click during the handoff waits for the retry instead of buying.
+    expect(await dispatch({ ...request, idemKey: "click" })).toEqual({ kind: "inflight" });
+    // The retry itself is not held back by its own intent.
+    api.create.mockResolvedValueOnce({ kind: "answered", value: run });
+    expect(await dispatch({ ...request, idemKey: "retry", timeoutRetry: true })).toMatchObject({
+      kind: "settled",
+    });
+  });
+
+  it("finds an intent a stopped worker left behind", async () => {
+    await lost();
+    api.create.mockResolvedValueOnce({ kind: "answered", value: timedOut });
+    await recover(undefined, vi.fn());
+    const onTimedOut = vi.fn();
+    await recover(undefined, onTimedOut);
+    expect(onTimedOut).toHaveBeenCalledWith(expect.objectContaining({ idemKey: "test" }));
+  });
+
+  it("does not hand on a timeout that was charged", async () => {
+    await lost();
+    api.create.mockResolvedValueOnce({
+      kind: "answered",
+      value: { ...timedOut, charge_usd: "0.01" },
+    });
+    const onTimedOut = vi.fn();
+    await recover(undefined, onTimedOut);
+    expect(onTimedOut).not.toHaveBeenCalled();
+  });
+
+  it("does not hand on a timeout of the retry itself", async () => {
+    await lost({ timeoutRetry: true });
+    api.create.mockResolvedValueOnce({ kind: "answered", value: timedOut });
+    const onTimedOut = vi.fn();
+    await recover(undefined, onTimedOut);
+    expect(onTimedOut).not.toHaveBeenCalled();
+  });
 });

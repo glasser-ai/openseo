@@ -58,6 +58,16 @@ export type PendingRecord = {
   readonly domains: readonly string[];
   readonly keyFingerprint: string;
   readonly reservedMicros: string;
+  /** The price this request was admitted with, in micros, for the loading
+      state. Kept apart from reservedMicros, which drops to 0 once a Run id is
+      known. Absent on records written before it existed. */
+  readonly estimate?: { readonly typical: string | null; readonly max: string };
+  /** This request is the one retry after a zero-charge Provider timeout. A
+      retry is never retried again, whichever path settles it. */
+  readonly timeoutRetry?: boolean;
+  /** Started by the toolbar badge for this tab, not by a click. Its retry
+      passes the badge's admission checks again. */
+  readonly automatic?: { readonly tabId: number };
   /** Written **before** the fetch. The record existing means "may already have
       been admitted". */
   readonly dispatchedAt: number;
@@ -67,6 +77,10 @@ export type PendingRecord = {
   readonly state: PendingState;
   readonly reason?: string;
 };
+
+/** The one wording for a request the budget stopped. The panel matches on it to
+    show a budget state instead of a failure. */
+export const BUDGET_REACHED = "Estimated budget reached. Check estimated budgets in Settings.";
 
 export type Settings = {
   readonly dailyCapMicros: string;
@@ -136,6 +150,25 @@ export async function fingerprint(key: string): Promise<string> {
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────
+/**
+ * Whether a change to the stored settings raised either spending cap. Only that
+ * can admit a lookup the old budget stopped; other settings (the badge
+ * switches) must not restart paid lookups. Missing values are the defaults.
+ */
+export function capsRaised(oldValue: unknown, newValue: unknown): boolean {
+  const cap = (value: unknown, name: "dailyCapMicros" | "monthlyCapMicros"): bigint => {
+    const saved = (value as Partial<Settings> | undefined)?.[name];
+    try {
+      return BigInt(saved ?? DEFAULT_SETTINGS[name]);
+    } catch {
+      return BigInt(DEFAULT_SETTINGS[name]);
+    }
+  };
+  return (["dailyCapMicros", "monthlyCapMicros"] as const).some(
+    (name) => cap(newValue, name) > cap(oldValue, name),
+  );
+}
+
 export async function getSettings(): Promise<Settings> {
   const saved = await read<Partial<Settings>>(SETTINGS);
   return {
@@ -160,7 +193,15 @@ export async function patchSettings(patch: Partial<Settings>): Promise<Settings>
 }
 
 // ── Headroom ──────────────────────────────────────────────────────────────
-type Ledger = { spend: Spend; history: SettledCharge[]; pending: Record<string, PendingRecord> };
+type Ledger = {
+  spend: Spend;
+  history: SettledCharge[];
+  pending: Record<string, PendingRecord>;
+  /** Timed-out requests waiting for their one retry, keyed by the first
+      request's idemKey. They hold no money; they keep the report locked and
+      survive a worker restart between the timeout and the retry. */
+  retries?: Record<string, PendingRecord>;
+};
 
 /** One storage value owns money, settlement identities and reservations. */
 async function loadLedger(now = new Date()): Promise<Ledger> {
@@ -243,6 +284,9 @@ export async function headroom(): Promise<Headroom> {
  * else awaited in between. The caller must already be inside `serialized`.
  */
 export async function reserve(amount: Micros): Promise<boolean> {
+  // A free lookup spends nothing, so no budget can stop it: a $0 budget means
+  // "no paid lookups", and Domain Rating costs $0.00.
+  if (amount === 0n) return true;
   const room = await headroom();
   if (amount < 0n || amount > room.dayRemaining || amount > room.monthRemaining) return false;
   const ledger = await loadLedger();
@@ -287,6 +331,7 @@ export async function settleCharge(idemKey: string, entry: SettledCharge): Promi
   const pinned = new Set(Object.values(pending).map((item) => item.runId));
   const history = seen ? ledger.history : [entry, ...ledger.history];
   await saveLedger({
+    ...ledger,
     pending,
     history: history.filter((row, index) => index < 500 || pinned.has(row.runId)),
     spend: {
@@ -318,6 +363,51 @@ export async function dropPending(idemKey: string): Promise<void> {
     pending,
     spend: { ...ledger.spend, reservedMicros: encodeMicros(remaining > 0n ? remaining : 0n) },
   });
+}
+
+/**
+ * Replaces a settled, timed-out pending request with its retry intent, in one
+ * ledger write: no moment exists where neither is stored. Called inside
+ * serialized(), after settleCharge, so the reservation is already released.
+ */
+export async function handOffToRetry(idemKey: string): Promise<void> {
+  const ledger = await loadLedger();
+  const { [idemKey]: record, ...pending } = ledger.pending;
+  if (!record) return;
+  const remaining = decodeMicros(ledger.spend.reservedMicros) - decodeMicros(record.reservedMicros);
+  await saveLedger({
+    ...ledger,
+    pending,
+    retries: { ...ledger.retries, [idemKey]: { ...record, reservedMicros: "0" } },
+    spend: { ...ledger.spend, reservedMicros: encodeMicros(remaining > 0n ? remaining : 0n) },
+  });
+}
+
+export const allRetryIntents = async (): Promise<PendingRecord[]> =>
+  Object.values((await loadLedger()).retries ?? {});
+
+export async function dropRetryIntent(idemKey: string): Promise<void> {
+  const ledger = await loadLedger();
+  if (!ledger.retries?.[idemKey]) return;
+  const { [idemKey]: _done, ...retries } = ledger.retries;
+  await saveLedger({ ...ledger, retries });
+}
+
+/** The retry intent for the same question, if one waits. */
+export async function retryIntentFor(
+  provider: string,
+  endpoint: string,
+  input: unknown,
+): Promise<PendingRecord | null> {
+  const wanted = stable(input);
+  for (const record of await allRetryIntents())
+    if (
+      record.provider === provider &&
+      record.endpoint === endpoint &&
+      stable(record.input) === wanted
+    )
+      return record;
+  return null;
 }
 
 export const allPending = async (): Promise<PendingRecord[]> =>

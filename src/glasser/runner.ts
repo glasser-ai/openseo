@@ -1,13 +1,17 @@
 import { decodeMicros, encodeMicros, usdToMicros } from "../ledger/micros.js";
 import {
   allPending,
+  allRetryIntents,
+  BUDGET_REACHED,
   dropPending,
   fingerprint,
   getKey,
+  handOffToRetry,
   type PendingRecord,
   type Purpose,
   putPending,
   reserve,
+  retryIntentFor,
   serialized,
   settleCharge,
   suspendPending,
@@ -25,11 +29,23 @@ const canRecover = (record: PendingRecord): boolean =>
 
 export type DispatchInput = {
   readonly purpose?: Extract<Purpose, { kind: "panel" }>;
+  /** The Key the caller inspected with. When the stored Key differs, nothing
+      is sent: the request was priced and approved for that Key's Workspace. */
+  readonly key?: string;
   readonly provider: string;
   readonly endpoint: string;
   readonly input: unknown;
   readonly domains: readonly string[];
   readonly maxChargeMicros: bigint;
+  /** What this request usually costs, when its price rule has such a figure. */
+  readonly typicalMicros?: bigint | null;
+  /** Checked inside the admission section, right before the reservation. An
+      automatic lookup uses it so a setting switched off, or a tab that moved
+      on, stops the request even after it was priced. */
+  readonly admit?: () => Promise<string | null>;
+  /** See PendingRecord.timeoutRetry and PendingRecord.automatic. */
+  readonly timeoutRetry?: boolean;
+  readonly automatic?: { readonly tabId: number };
   readonly idemKey: string;
   readonly endpointVersion?: number;
 };
@@ -48,8 +64,11 @@ export async function dispatch(
   request: DispatchInput,
   persistResult?: (run: Run) => Promise<void>,
 ): Promise<DispatchResult> {
-  const key = await getKey();
-  if (key === undefined) return { kind: "blocked", reason: "no Key" };
+  const stored = await getKey();
+  if (stored === undefined) return { kind: "blocked", reason: "no Key" };
+  if (request.key !== undefined && request.key !== stored)
+    return { kind: "blocked", reason: "Key changed. Try again." };
+  const key = stored;
   const print = await fingerprint(key);
 
   // The headroom check, the reservation and the pending record all happen inside
@@ -59,16 +78,24 @@ export async function dispatch(
     if ((await getKey()) !== key) return { ok: false as const, reason: "Key changed. Try again." };
 
     // Reports for different endpoints are independent; identical pending requests share a Run.
-    const open = await unresolvedRequest(request.provider, request.endpoint, request.input);
+    // A stored retry intent locks the report as a pending request does, for
+    // everything but the retry itself.
+    const open =
+      (await unresolvedRequest(request.provider, request.endpoint, request.input)) ??
+      (request.timeoutRetry
+        ? null
+        : await retryIntentFor(request.provider, request.endpoint, request.input));
     if (open !== null) {
       return open.state === "suspended"
         ? { ok: false as const, reason: "An earlier request for this never finished." }
         : { ok: false as const, inflight: true as const, reason: "already running" };
     }
+    const veto = request.admit ? await request.admit() : null;
+    if (veto !== null) return { ok: false as const, reason: veto };
     if (!(await reserve(request.maxChargeMicros))) {
       return {
         ok: false as const,
-        reason: "Estimated budget reached. Check estimated budgets in Settings.",
+        reason: BUDGET_REACHED,
       };
     }
     // dispatchedAt is persisted **before** the fetch: otherwise a worker killed
@@ -87,6 +114,15 @@ export async function dispatch(
       domains: [...request.domains],
       keyFingerprint: print,
       reservedMicros: encodeMicros(request.maxChargeMicros),
+      estimate: {
+        typical:
+          request.typicalMicros === undefined || request.typicalMicros === null
+            ? null
+            : request.typicalMicros.toString(),
+        max: request.maxChargeMicros.toString(),
+      },
+      ...(request.timeoutRetry ? { timeoutRetry: true } : {}),
+      ...(request.automatic ? { automatic: request.automatic } : {}),
       dispatchedAt: Date.now(),
       attempts: 1,
       state: "in-flight",
@@ -120,6 +156,7 @@ async function resolve(
   /** Persists the result (writes the cache). Must complete **before** the
       pending record is deleted — see settle. */
   persistResult?: (run: Run) => Promise<void>,
+  onTimedOut?: OnTimedOut,
 ): Promise<DispatchResult> {
   if (outcome.kind === "uncertain") {
     return { kind: "uncertain", reason: outcome.reason };
@@ -151,8 +188,30 @@ async function resolve(
     });
     return { kind: "running", runId: run.id };
   }
-  await settle(idemKey, run, reserved, persistResult);
+  await settle(idemKey, run, reserved, persistResult, onTimedOut);
   return { kind: "settled", run };
+}
+
+/**
+ * Told, inside the settlement section and before the pending record is
+ * deleted, that a Run recovery settled was a zero-charge Provider timeout
+ * eligible for its one retry. The live response retries in
+ * src/domain/service.ts; this gives a timeout that only recovery sees the
+ * same treatment. It must not await: it marks the request as retrying and
+ * schedules the retry, which goes through dispatch like any first request.
+ */
+export type OnTimedOut = (record: PendingRecord) => void;
+
+/** One retry, only at exactly $0, never for a retry, only for panel lookups. */
+export function retriesAfterTimeout(record: PendingRecord, run: Run, charged: bigint): boolean {
+  return (
+    record.purpose?.kind === "panel" &&
+    record.timeoutRetry !== true &&
+    run.status === "FAILED" &&
+    run.failure?.kind === "TIMED_OUT" &&
+    run.charge_usd !== null &&
+    charged === 0n
+  );
 }
 
 /**
@@ -168,6 +227,7 @@ async function settle(
   run: Run,
   reserved: bigint,
   persistResult?: (run: Run) => Promise<void>,
+  onTimedOut?: OnTimedOut,
 ): Promise<void> {
   // Parsing **outside** the serial section would let one unexpectedly formatted
   // amount trap the whole record in a replay loop.
@@ -194,7 +254,12 @@ async function settle(
     //    part-way: the record remains and a replay fetches the same Run.
     if (persistResult) await persistResult(run);
     // 4. Delete last. It doubles as the "no new Run for these domains" lock.
-    await dropPending(idemKey);
+    //    A timeout due a retry hands the lock to a stored retry intent in the
+    //    same write, and the retry drops the intent when it ends.
+    if (pending && onTimedOut && retriesAfterTimeout(pending, run, charged)) {
+      await handOffToRetry(idemKey);
+      onTimedOut(pending);
+    } else await dropPending(idemKey);
   });
 }
 
@@ -205,10 +270,17 @@ async function settle(
  * existing means "may already have been admitted" — so no path here releases a
  * reservation on the strength of a 4xx.
  */
-export async function recover(onSettled?: (record: PendingRecord, run: Run) => Promise<void>) {
+export async function recover(
+  onSettled?: (record: PendingRecord, run: Run) => Promise<void>,
+  onTimedOut?: OnTimedOut,
+) {
   const key = await getKey();
   if (key === undefined) return;
   const print = await fingerprint(key);
+
+  // Intents a stopped worker left behind. The handler skips one it is
+  // already working on.
+  if (onTimedOut) for (const intent of await allRetryIntents()) onTimedOut(intent);
 
   for (const record of await allPending()) {
     if (!canRecover(record)) continue;
@@ -247,8 +319,13 @@ export async function recover(onSettled?: (record: PendingRecord, run: Run) => P
           })
         : await getRun(key, current.runId);
 
-    const result = await resolve(outcome, current.idemKey, reserved, false, (run) =>
-      onSettled ? onSettled(current, run) : Promise.resolve(),
+    const result = await resolve(
+      outcome,
+      current.idemKey,
+      reserved,
+      false,
+      (run) => (onSettled ? onSettled(current, run) : Promise.resolve()),
+      onTimedOut,
     );
     void result;
   }

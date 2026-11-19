@@ -44,3 +44,19 @@ export async function idempotencyKey(input: {
     explicit refresh. */
 export const mintEpoch = (): string =>
   `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+
+/**
+ * The one retry after a zero-charge Provider timeout, derived from the first
+ * request's key. The live response and recovery can both see the same timeout;
+ * with one identity the second to send replays the first one's Run instead of
+ * buying it again.
+ */
+export async function timeoutRetryKey(firstKey: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`${firstKey}:timeout-retry`),
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
