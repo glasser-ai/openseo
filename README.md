@@ -44,8 +44,8 @@ folder to preserve the extension identity and saved settings.
 Reports are cached locally for **7 days**, or **1 day** for empty results, and reused across tabs
 and browser restarts. Opening a section automatically fetches missing or outdated results. Overview
 is a section of five, so opening the panel on a domain with nothing saved fetches all five, about
-**$0.06**; reopening it within the 7 days costs nothing. The default $5/day covers roughly 80 new
-domains. AI search citations cost **$0.13** and the Site section about **$0.02**; each is fetched
+**$0.07**; reopening it within the 7 days costs nothing. The default $5/day covers roughly 70 new
+domains. While a lookup runs, the panel shows its current price from glasser. AI search citations cost **$0.13** and the Site section about **$0.02**; each is fetched
 only when that section is opened. The Search section adds competitors and top pages, about
 **$0.03** together. The Page section's checks and AI crawler access are free; the keywords
 the open page ranks for cost about **$0.015** per page.
@@ -57,8 +57,21 @@ is a separate lookup with its own charge and cache. **Refresh** requests new dat
 free to view.
 
 Settings provides estimated budgets of **$5/day** and **$20/month** per browser profile.
-Price changes can cause charges to exceed them. Set either to zero to stop new paid lookups;
+Price changes can cause charges to exceed them. Set either to zero to stop new paid lookups (free
+lookups still run);
 pending requests can still charge. Activity shows charges and unfinished requests.
+
+The toolbar icon shows the open site's Domain Rating. By default, each new site you view in the
+front tab gets one Domain Rating lookup, saved for 7 days. The lookup is free today; if glasser
+starts charging for it, it counts against the budgets. Background tabs, windows that are not in
+front, `localhost`, IP addresses, intranet names such as `wiki.corp.local` or `nas.lan`, and sites
+under a shared host such as `github.io` are skipped. To stop these lookups, turn off
+**Look up new sites automatically** in Settings; the badge then shows saved ratings only. Turn off
+**Show Domain Rating on the toolbar icon** to remove the badge.
+
+Every figure describes the site's domain: on `www.wikipedia.org` the panel reports
+`wikipedia.org` and its subdomains, and says so in the header. A site under a shared host such as
+`tenant.github.io` is reported as itself. The Page section is the exception: it reads the open page.
 
 Only the domain is sent for lookups. No page content or telemetry.
 See [Privacy](PRIVACY.md).
